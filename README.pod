@@ -1,0 +1,81 @@
+=head1 NAME
+
+Log::Shiras - Moose based logging and reporting
+
+=head1 DESCRIPTION
+
+L<Shiras|http://en.wikipedia.org/wiki/Moose#Subspecies> - A small subspecies of Moose found in the western United States (of America).
+
+This is a Moose based logger with the ability to run lean or add functionality using a Moose object model.  While no specific element of this logger is unique to the L<sea|https://metacpan.org/search?q=Log> of logging modules on CPAN this aggregation of functions is.  Additionally since the package drifts outside of the pure run logging that most loggers implement, I have been brazen enough to use different terms for some familiar concepts from the logging world.  Ultimatly the goal is to provide a base Moose class which can be used (and abused) for general input and output while leveraging some of the really cool API stuff established in the better logging models in use broadly on CPAN.   Some examples of concepts taken from the logging world include logging levels, logging namespaces, config file management of logging, output formatting, and realtime input and output adjustements from outside of the information generating code.
+A core (and intentional) design decision of this module is to split the functions of input and output handling into separate classes.   This allows the user to define the amount of overhead applied to input and output management.  Additionally for the two separate classes (possibly running in separate instances) to communicate seamlessly with each other a third class is created to handle traffic.  This is primarily done through a global variable.  B<Warning this global varaible maintains a global logging namespace that requires conscious managment!>  At least in this initial release very little care is given to protecting an existing running name space from a new logging instance.  It is entirely possible to turn on a new logger and begin to collect information from a namespace that exists in a currently running instance.  Using class names as part of the registered namespace will help (but not fully eliminate) this risk.
+
+=head1 TERMS
+
+=head2 Source
+
+=over
+
+=head3 Definition
+
+The timing and location of the information to be collected. 
+
+=head3 Explanation
+
+This term is analogous to "appender" in most logging systems.  Since the goal is to stretch the definition a little, the more generic term "source" is used instead.
+
+=back
+
+=head2 Sink
+
+=over
+
+=head3 Definition
+
+The places and methods used for the endpoint of the collected data. 
+
+=head3 Explanation
+
+This term is analogous to "logger" in most logging systems.  Because the timing of the output and the purpose of the output can vary from a traditional "log" then the term is changed as well.
+
+=back
+
+=head2 Switchboard
+
+=over
+
+=head3 Definition
+
+This is the global connection point for sources and sinks.
+
+=head3 Explanation
+
+The switchboard will only act if it is triggered by the sources.  The sinks will only be engaged if activated by the switchboard.
+
+=back
+
+=head1 Install from Source
+
+(for example git)
+
+=over
+
+=item B<1.> Download a compressed file with the code
+	
+=item B<2.> Extract the code from the compressed file
+
+=item B<3.> cd into the extracted directory
+
+=back
+
+(For Windows find what version of make was used to compile your perl)
+
+	perl  -V:make
+
+Then
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+	make clean
+
