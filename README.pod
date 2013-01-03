@@ -190,10 +190,6 @@ changes to the Switchboard are done through the operator.
 
 	my $operator = get_operator( %args|filename );
 
-=head3 Documentation
-
-L<Log::Shiras::Switchboard|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm>
-
 =head2 Telephone
 
 =head3 Definition
@@ -206,11 +202,7 @@ The phone is provided by the switchboard and comes from the switchboard pre-wire
 =head3 Creation
 
 	my $telephone = get_telephone( %args );
-
-=head3 Documentation
-
-L<Log::Shiras::Telephone|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm>
-
+	
 =head2 Report
 
 =head3 Definition
@@ -225,10 +217,6 @@ formatting differences between reports for the same message.
 =head3 Use
 
 	$report_instance->add_line( %message );
-
-=head3 Documentation
-
-L<Log::Shiras::Report|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report.pm>
 
 =head2 Place a call (talk)
 
@@ -254,11 +242,7 @@ will attempt to coerce this input to a hashref.
 =head3 Use
 
 	$telephone->talk( message =>[ 'Hello World!', ] );
-
-=head3 Documentation
-
-L<Log::Shiras::Telephone|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm>
-
+	
 =head1 Differentiation
 
 Why choose this Logger over one of the other hundreds of options?  I have listed some 
@@ -327,7 +311,7 @@ data generation code is attractive to me.
 
 	perl  -V:make
 
-Then
+Then (adjusting make for your installation of perl)
 
 	perl Makefile.PL
 	make
