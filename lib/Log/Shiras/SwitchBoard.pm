@@ -1,44 +1,44 @@
 package Log::Shiras::Switchboard;
+use version; our $VERSION = version->declare("v0.21_1");
 
 use 5.010;
 use MooseX::Singleton;
 use MooseX::StrictConstructor;
+use	MooseX::HasDefaults::RO;
 use DateTime;
-use POSIX;
-use Carp qw( cluck confess );#
-use version 0.94; our $VERSION = qv('0.013_001');
+use Carp qw( croak );
+our @CARP_NOT = qw(
+		Log::Shiras::Switchboard
+		Log::Shiras::Telephone
+	);
 use MooseX::Types::Moose qw(
 		HashRef
 		ArrayRef
 		Bool
 		Num
 		Object
+		Str
+		RegexpRef
+		CodeRef
     );
-use Moose::Exporter;
-Moose::Exporter->setup_import_methods(
-    as_is => [ 'get_telephone', 'get_operator', ],#
-);
-use YAML::Any qw( LoadFile);
-use IO::Callback;
+#~ use Data::Dumper;
+#~ use Moose::Exporter;
+#~ Moose::Exporter->setup_import_methods(
+    #~ as_is => [ 'get_operator', ],#'get_telephone', 
+#~ );
+use MooseX::ShortCut::BuildInstance 0.008 qw( build_instance );
+#~ use lib
+	#~ '../../../lib',
+	#~ '../../../../Data-Walk-Extracted/lib';
+use Data::Walk::Extracted 0.024;
+use Data::Walk::Prune 0.024;
+use Data::Walk::Clone 0.024;
+use Data::Walk::Graft 0.024;
+use Data::Walk::Print 0.024;
 use lib 
 	'../lib', 
-	'lib', 
-	'../../../lib', 
-	'../../../../Data-Walk-Extracted/lib',
-	'../Data-Walk-Extracted/lib',
-	'../../../../MooseX-ShortCut-BuildInstance/lib',
-	'../MooseX-ShortCut-BuildInstance/lib';
-use MooseX::ShortCut::BuildInstance 0.003 qw( build_instance );
-use Data::Walk::Extracted 0.017;
-use Data::Walk::Prune 0.011;
-use Data::Walk::Clone 0.011;
-use Data::Walk::Graft 0.013;
-if( $ENV{ Smart_Comments } ){
-	use Smart::Comments -ENV;
-	### <where> - Smart-Comments turned on for Log-Shiras-Switchboard ...
-}
-use Log::Shiras::Telephone 0.001;
-use Log::Shiras::Types 0.013 qw(
+	'lib';
+use Log::Shiras::Types qw(
 		elevenArray
 		elevenInt
 		reportobject
@@ -47,73 +47,62 @@ use Log::Shiras::Types 0.013 qw(
 		jsonfile
 		filehash
 	);
+#~ with Log::Shiras::Caller =>{ VERSION => 0.018 };
 
 #########1 Package Variables  3#########4#########5#########6#########7#########8#########9
 
-my 	@default_levels = (# This one goes to eleven :^|
-		'trace', 'debug', 'info', 'warn', 
-		'error', 'fatal', undef, undef, 
-		undef, undef, undef, 'eleven',
+my 	@default_levels = ( 
+		'trace', 'debug', 'info', 'warn', 'error', 'fatal', 
+		undef, undef, undef, undef, undef, 'eleven',# This one goes to eleven :^|
 	);
 my $time_zone = DateTime::TimeZone->new( name => 'local' );
+our	$debug_filter = 0;
 ###### <where> - time_zone: $time_zone
 
-#########1 Exported Methods   3#########4#########5#########6#########7#########8#########9
+#########1 import   2#########3#########4#########5#########6#########7#########8#########9
 
-#Special MooseX::Singleton instantiation that pulls multiple instances into the same master case
-sub get_operator{
-	### <where> - Setting up a switchboard ...
-	### <where> - parsing arguments to allow for a YAML file ...
-	my	$class = __PACKAGE__;
-	my 	$arguments = ( @_ > 1 ) ? { @_ } : $_[0] ;
-	### <where> - the passed arguments are: $arguments
-	if( $arguments ){
-		$arguments = ( is_argshash( $arguments ) ) ? $arguments :
-			to_argshash(
-				( 	is_yamlfile( $arguments ) or 
-					is_jsonfile( $arguments ) ) ?
-						to_filehash( $arguments ) : $arguments );
-	}
-	### <where> - with arguments: $arguments
-	my  $instance = $class->instance;#Returns a pre-existing instance if it exists
-	### <where> - with instance: $instance
-	for my $key ( keys %$arguments ){
-		### <where> - setting up data for: $key
-		my $method_1 = "add_$key";
-		my $method_2 = "set_$key";
-		if( $instance->can( $method_1 ) ){
-			$instance->$method_1( $arguments->{$key} );
-		}else{
-			if( is_HashRef( $arguments->{$key} ) ){
-				$instance->$method_2( %{$arguments->{$key}} );
-			}else{
-				$instance->$method_2( $arguments->{$key} );
-			}
+sub import {
+    my( $class, @args ) = @_;
+ 
+    my(%tags) = map { $_ => 1 } @args;
+	my	$instance;
+    if(exists $tags{':debug'}) {
+		#~ print "Found :debug tag in Log::Shiras::Switchboard v0.21!\n";
+        my $FILTER_MODULE = "Filter::Util::Call";
+        if(! "require $FILTER_MODULE" ) {
+            die "$FILTER_MODULE required with :debug" .
+                "(install from CPAN)";
+        }else{
+			#~ print "'$FILTER_MODULE' found!\n";
 		}
-	}
-	##### <where> - instance: $instance
-	return $instance;
-}
-
-sub get_telephone{
-	my	$self = __PACKAGE__->instance;# Singleton trick
-	### <where> - getting the permissions for this phone ...
-	my	$name_space = $_[0];
-	my 	$permissions_ref = $self->_get_permissions( undef, $name_space );
-	### <where> - build the telephone based on the name_space rules: $permissions_ref
-	my $phone_args;
-	if( keys %$permissions_ref ){
-		#### <where> - updated level ref: $permissions_ref
-		$phone_args->{works} = 1;
-		$phone_args->{level_ref} = $permissions_ref;
-		$phone_args->{switchboard} = $self;
-	}else{
-		$phone_args->{works} = 0;
-		if( $self->will_cluck ){
-			cluck "The phone will not work in this name_space";
-		}
-	}
-	return Log::Shiras::Telephone->_new( $phone_args );
+        eval "require $FILTER_MODULE" or die "Cannot pull in $FILTER_MODULE";
+        Filter::Util::Call::filter_add(
+            sub {
+                my($status);
+                s/###LogSD\s+// if
+                    ($status = Filter::Util::Call::filter_read()) > 0;
+                $status;
+                }
+		);
+		$debug_filter = 1;
+		#~ print "debug filter set for Switchboard v0.21!\n";
+        delete $tags{':debug'};
+    }
+ 
+    #~ if(exists $tags{':self_report'}) {
+		#~ $instance //= shift->instance;#Returns a pre-existing instance if it exists
+		#~ $instance->_set_self_report( sub{ s/^\s*###LogSSR//mg } );
+		#~ if( !eval{ require Filter::Simple $self->_release_self_report } ){
+            #~ die "$FILTER_MODULE required with :resurrect" .
+                #~ "(install from CPAN)";
+        #~ }
+        #~ delete $tags{':resurrect'};
+    #~ }
+ 
+    if(keys %tags) {
+        # We received an Option we couldn't understand.
+        die "Unknown Option(s): @{[keys %tags]}";
+    }
 }
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
@@ -125,10 +114,8 @@ has 'name_space_bounds' =>(
 	reader	=> 'get_name_space',
 	clearer	=> '_clear_all_name_space',
 	writer	=> '_set_whole_name_space',
-    handles	=> {
-        has_no_name_space 	=> 'is_empty',
-    },
 	default	=> sub{ {} },
+	trigger	=> \&_clear_can_communicate_cash,
 );
 
 has 'reports' =>(
@@ -138,7 +125,7 @@ has 'reports' =>(
 	reader	=> 'get_reports',
 	writer	=> '_set_all_reports',
 	handles	=>{
-        has_no_reports	=> 'is_empty',
+        #~ has_no_reports	=> 'is_empty',
 		_set_report		=> 'set',
 		get_report		=> 'get',
 		remove_reports	=> 'delete',
@@ -153,43 +140,12 @@ has 'logging_levels' =>(
 	handles	=>{
 		has_log_level 		=> 'exists',
 		add_log_levels 		=> 'set',
-		get_log_levels		=> 'get',
+		_get_log_levels		=> 'get',
 		remove_log_levels 	=> 'delete',
 	},
 	writer	=> 'set_all_log_levels',
 	reader	=> 'get_all_log_levels',
-	default	=> sub{ {
-		log_file	=> [ @default_levels ],
-		STDOUT		=> [ @default_levels ],
-		WARN		=> [ @default_levels ],
-	} },
-);
-
-has 'will_cluck' =>(
-	is 		=> 'ro',
-	isa		=> Bool,
-	default => 0,
-	writer  => 'set_will_cluck',
-);
-
-has 'ignored_callers' =>(
-	is 		=> 'ro',
-	isa		=> ArrayRef,
-	traits	=> ['Array'],
-	default => sub{ [ qw(
-		^Test
-		^IO::Callback
-		^Carp
-		^Log::Shiras::Switchboard
-		^Log::Shiras::Telephone
-		^Log::Shiras::Report
-		^Smart::Comments
-		^Data::Walk::
-	) ] },
-	writer  => 'set_ignored_callers',
-	handles =>{
-		add_ignored_callers => 'push',
-	},
+	default	=> sub{ {} },
 );
 
 has 'buffering' =>(
@@ -199,166 +155,322 @@ has 'buffering' =>(
 	reader	=> 'get_all_buffering',
 	writer	=> '_set_all_buffering',
 	handles	=>{
-        has_no_buffering	=> 'is_empty',
-		has_buffering		=> 'exists',
-		set_buffering		=> 'set',
-		get_buffering		=> 'get',
-		remove_buffering	=> 'delete',
+        has_defined_buffering	=> 'exists',
+		set_buffering			=> 'set',
+		get_buffering			=> 'get',
+		remove_buffering		=> 'delete',
 	},
 	default	=> sub{ {log_file => 0,} },
 );
 
+has 'self_report' =>(
+	is 		=> 'ro',
+	isa		=> Bool,
+	default => 0,
+	writer  => 'set_self_report',
+);
+
+has 'skip_up_caller' =>(
+    traits	=> ['Array'],
+	is		=> 'ro',
+	isa		=> ArrayRef[RegexpRef|Str],
+	writer	=> 'set_all_skip_up_callers',
+	handles	=>{
+        get_all_skip_up_callers	=> 'elements',
+		add_skip_up_caller		=> 'push',
+	},
+	clearer	=> 'clear_all_skip_up_callers',
+	default	=> sub{ [ qw(
+		^Test::
+		^Capture::
+		\(eval\)
+		^Class::MOP
+	) ] },
+);
+		#~ TapWarn::__ANON__$
+
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
+
+#Special MooseX::Singleton instantiation that pulls multiple instances into the same master case
+sub get_operator{
+	my	$instance	= shift->instance;#Returns a pre-existing instance if it exists
+	my	$arguments	=
+			( !@_ ) ? undef :
+			( ( @_ > 1 ) and ( scalar( @_ ) % 2 == 0 ) ) ? { @_ } : 
+			( is_yamlfile( $_[0] ) or is_jsonfile( $_[0] ) ) ? to_filehash( $_[0] ) :
+				to_argshash( $_[0] );
+	if( $arguments and exists $arguments->{conf_file} ){
+		my $file_hash = to_filehash( $arguments->{conf_file} );
+		delete $arguments->{conf_file};
+		$arguments = $instance->graft_data( tree_ref => $arguments, scion_ref => $file_hash );
+	}
+	my $level = 0;
+	my	$message = [ "Starting get operator" ];
+	if( keys %$arguments ){
+		$level = 2;
+		push @$message, 'With updates to:' , keys %$arguments;
+	}
+	$instance->_internal_talk( { report => 'log_file', level => $level,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_operator',
+		message => $message, } );
+	my @action_list;
+	for my $key ( keys %$arguments ){
+		push @action_list, $key;
+		my $method_1 = "add_$key";
+		my $method_2 = "set_$key";
+		if( $instance->can( $method_1 ) ){
+			$instance->$method_1( $arguments->{$key} );
+		}else{
+			if( is_HashRef( $arguments->{$key} ) ){
+				$instance->$method_2( %{$arguments->{$key}} );
+			}else{
+				$instance->$method_2( $arguments->{$key} );
+			}
+		}
+	}
+	$instance->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_operator',
+		message =>[ "Switchboard finished updating the following arguments: ", @action_list ], } );
+	$instance->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_operator',
+		message =>[ 'The switchboard instance:', $instance ], } );
+	return $instance;
+}
+
+sub get_caller{
+	my ( $self, $start_level ) = @_;
+	my $caller_ref;
+	my $level = ( defined $start_level ) ? $start_level : 2;
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_caller',
+		message => "Arrived at get_caller for level: " . ( $level ), } );
+	my ( @upwards_caller_array, @last_value_list );
+	my @base_caller_array = caller($level);
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_caller',
+		message => [ 'Initial base caller list:', @base_caller_array ] } );
+	if( !$base_caller_array[1] ){#Go down if you're too high!
+		$level--;
+		@base_caller_array = caller($level);
+		$base_caller_array[3] = 'main';
+		$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+			name_space => 'Log::Shiras::Switchboard::get_caller',
+			message => 'Need to check one level lower', } );
+	}
+	@last_value_list = @base_caller_array[ 0 .. 3 ];
+	$last_value_list[3] = $last_value_list[0];
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_caller',
+		message => [ 'Updated base caller list:', @base_caller_array ], } );
+	my $pass = 0;
+	CHECKSKIPLIST: while( !$pass ){
+		$level++;
+		@upwards_caller_array = caller($level);
+		if( @upwards_caller_array ){
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::get_caller',
+				message => [ 'Upwards caller list:', @upwards_caller_array ], } );
+			@last_value_list = @upwards_caller_array[ 0 ..3 ];
+			for my $skip ( $self->get_all_skip_up_callers ){
+				$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+					name_space => 'Log::Shiras::Switchboard::get_caller',
+					message => [ "Testing -" . $last_value_list[3] . "- against: $skip" ], } );
+				if( $last_value_list[3] =~ /$skip/ ){
+					$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+						name_space => 'Log::Shiras::Switchboard::get_caller',
+						message => [ "The upwards subroutine", $last_value_list[3],
+							"is skiped by matching", $skip ], } );
+					next CHECKSKIPLIST;
+				}
+			}
+			$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+				name_space => 'Log::Shiras::Switchboard::get_caller',
+				message => [ "PASS!! - No skip_list match found for: " . $last_value_list[3] ], } );
+		}else{#Base state
+			$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+				name_space => 'Log::Shiras::Switchboard::get_caller',
+				message => 'Ran out of space at the top of the caller stack!!!', } );
+			last CHECKSKIPLIST;
+		}
+		$pass = 1;#Complete state
+	}
+	if( !$upwards_caller_array[3] ){#Go down if you're too high!
+		@upwards_caller_array[0 .. 3] = @last_value_list;
+	}
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_caller',
+		message => ['Final caller list:', @base_caller_array, @upwards_caller_array[0 .. 3]] } );
+	@$caller_ref{ qw(
+			package filename line subroutine hasargs wantarray
+			evaltext is_require hints bitmask hinthash
+			up_package up_file up_line up_sub
+		) } = ( @base_caller_array, @upwards_caller_array[0 .. 3] );
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::get_caller',
+		message => [ 'Caller converted to a hash ref:', $caller_ref ], } );
+	return $caller_ref;
+}
 
 sub add_name_space_bounds{
 	my ( $self, $name_space_ref ) = @_;
-	### <where> - reached add_name_space_bounds with: $name_space_ref
-	#### <where> - current master name space: $self->get_name_space
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::add_name_space_bounds',
+		message => [ 'Arrived at add_name_space_bounds with:', $name_space_ref ], } );
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::add_name_space_bounds',
+		message =>	[ 'Current master name_space_bounds: ', $self->get_name_space ], 	} );
 	my 	$new_sources = 	$self->graft_data(
 							tree_ref 	=> $self->get_name_space,
 							scion_ref	=> $name_space_ref,
 						);
-	$self->_set_whole_name_space( $new_sources );
-	#### <where> - updated master name space: $self->get_name_space
-	return 1;
+	my	$result = $self->_set_whole_name_space( $new_sources );
+	
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::add_name_space_bounds',
+		message =>	[ 'Updated master name_space_bounds:', $result ], 	} );
+	return $result;
+}
+
+sub remove_name_space_bounds{
+	my ( $self, $removal_ref ) = @_;
+	my	$result;
+	$self->_set_error_string( "'You are removing name space elements - There is no warning if you are removing important data!'" );
+	$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::remove_name_space_bounds',
+		message => 'You are removing name space elements - There is no warning if you are removing important data!', } );
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::remove_name_space_bounds',
+		message => [ 'Removing the elements:', $removal_ref ],				} );
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::remove_name_space_bounds',
+		message => [ 'Pre-removal space:', $self->get_name_space ], } );
+	$self->_set_whole_name_space(
+		$result = $self->prune_data( 	tree_ref => $self->get_name_space, 	slice_ref => $removal_ref, )
+	);
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::remove_name_space_bounds',
+		message => [ 'the result of pruning is: ', $result ], } );
+	return $result;
 }
 
 sub add_reports{
 	my $self = shift;
 	my %report_hash = ( scalar( @_ ) == 1 ) ? %{$_[0]} : @_ ;
-	### <where> - reached add_reports with: %report_hash
-	#### <where> - current master reports: $self->get_reports
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::add_reports',
+		message =>	[ 'Arrived at add_reports with:', {%report_hash} ], } );
+	$self->_internal_talk( { report => 'log_file', level => 0,
+		name_space => 'Log::Shiras::SwitchBoard::add_reports',
+		message =>	[ 'Current master reports:', $self->get_reports], } );
 	for my $name ( keys %report_hash	){
-		### <where> - processing report name: $name
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			message => 'Adding output to the report named: ' . $name,
+			name_space => 'Log::Shiras::SwitchBoard::add_reports', } );
 		my $report_list = $self->get_report( $name ) // [];
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard::add_reports',
+			message => [ 'Report list:', $report_list ], } );
 		for my $report ( @{$report_hash{$name}} ){
-			### <where> - adding an additional report to the global report variable: $report
-			if( is_yamlfile( $report ) or is_jsonfile( $report ) ){
-				### <where> - coercing filename: $report
-				$report = to_filehash( $report );
-			}
-			### <where> - result: $report
-			if( is_filehash( $report ) ){
-				### <where> - coercing hash ref: $report
+			$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+				name_space => 'Log::Shiras::SwitchBoard::add_reports',
+				message => [ 'processing:', $report], } );
+			if( is_reportobject( $report ) ){
+				$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+					message => 'no object creation needed for this output',
+					name_space => 'Log::Shiras::SwitchBoard::add_reports', } );
+			}else{
 				$report = to_reportobject( $report );
+				$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+					name_space => 'Log::Shiras::SwitchBoard::add_reports',
+					message => [ 'after building the instance:', $report ], } );
 			}
-			###########################################################   TODO below
-			#~ $report->_set_switchboard_hook( $self );
-			### <where> - result: $report
 			push @{$report_list} , $report;
 		}
 		$self->_set_report( $name => $report_list );
 	}
-	#### <where> - current reports: $self->get_reports
+	
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::add_reports',
+		message =>	[ 'Updated master name_space_bounds:', $self->get_name_space ], } );
 	return 1;
 }
 
-sub remove_name_space{
-	my ( $self, $removal_ref ) = @_;
-	### <where> - There will be no warning if you are cutting some other codes name space! ...
-	### <where> - reached remove_name_space with: $removal_ref
-	#### <where> - name space before pruning is: $self->get_name_space
-	$self->_set_whole_name_space(
-		$self->prune_data(
-			tree_ref => $self->get_name_space,
-			slice_ref => $removal_ref,
-		)
-	);
-	#### <where> - the result of pruning is: $self->get_name_space
-	return 1;
-}
-
-sub set_stdout_level{
-	my ( $self, $level ) = @_;
-	if( $self->will_cluck ){
-		cluck "You are currently attempting to Hijack some STDOUT output.  " .
-				"BEWARE, this will slow all printing down!!!!  " .
-				"Additionally, all print statements in the reports using " .
-				"STDOUT must 'print STDOUT' explicitly to avoid deep recursion.";
+sub get_log_levels{
+	my ( $self, $report ) = @_;
+	$report //= 'log_file';
+	my	$output;
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::get_log_levels',
+		message => "Reached get_log_levels for report: $report", } );
+	my  $x = 0;
+	if( $self->has_log_level( $report ) ){
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard:get_log_levels',
+			message => "Custom log level for -$report- found", } );
+		$output = $self->_get_log_levels( $report );
+	}else{
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard::get_log_levels',
+			message => "No custome log levels in force for -$report- sending the defaults", } );
+		$output = [ @default_levels ];
 	}
-	my $report_ref;
-	$report_ref->{level} = $self->_convert_level_name_to_number( $level, 'STDOUT' );
-	$report_ref->{report} = 'STDOUT';
-	my	$code_ref = sub{
-			### <where> - processing captured print statments at: (caller(1))[3]
-			$report_ref->{message} = $_[0];
-			$report_ref->{level_ref} = $self->_get_permissions( 'STDOUT' );
-			### <where> - sending: $report_ref
-			if( !$self->_attempt_to_report( $report_ref ) ){
-				### <where> - no special reporting for this name_space at level: $report_ref->{level}
-				print STDOUT $report_ref->{message};
-			}
-		};
-	### <where> - re-pointing standard output to the new coderef ...
-	select( IO::Callback->new('>', $code_ref)) or confess "Couldn't redirect STDOUT: $!";
-	return 1;
+	no warnings 'uninitialized';#OK to have undef at some levels
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::get_log_levels',
+		message => "Returning the log levels for -$report-" . join( ', ', @$output ), } );
+    use warnings 'uninitialized';
+	return $output;
 }
 
-sub set_warn_level{
-	my ( $self, $level ) = @_;
-	if( $self->will_cluck ){
-		cluck "You are currently attempting to Hijack some WARN output.\n" .
-				"BEWARE, this will slow all warnings down!!!!\n";
+sub send_buffer_to_output{
+    my ( $self, $report ) = @_;
+	$report //= 'log_file';
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::send_buffer_to_output',
+		message => "Reached send_buffer_to_output for report: $report", } );
+	my  $x = 0;
+	if(	!$self->has_defined_buffering( $report ) or !$self->get_buffering( $report ) ){
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard::send_buffer_to_output',
+			message => "Attempting to send buffer to output when no buffering is in force!", } );
+		$self->_set_error_string( "Attempting to send buffer to output when no buffering is in force!" );
+	}else{
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard::send_buffer_to_output',
+			message => "Flushing the buffer ...", } );
+		$x = $self->_flush_buffer( $report );
 	}
-	##### <where> - $SIG{__WARN__}: $SIG{__WARN__}
-	my $report_ref;
-	$report_ref->{level} = $self->_convert_level_name_to_number( $level, 'WARN' );
-	$report_ref->{report} = 'WARN';
-	my	$code_ref = sub{
-			### <where> - processing captured print statments at: caller(1)
-			$report_ref->{message} = $_[0];
-			### <where> - message: $report_ref
-			$report_ref->{level_ref} = $self->_get_permissions( 'WARN' );
-			### <where> - sending: $report_ref
-			if( !$self->_attempt_to_report( $report_ref ) ){
-				### <where> - no special reporting for this name_space at level: $report_ref->{level}
-				print STDOUT $report_ref->{message};
-			}
-		};
-	### <where> - implement a sig handler for the new coderef ...
-	$SIG{__WARN__} = $code_ref or die "Couldn't redirect __WARN__: $!";
-	return 1;
-}
-
-sub clear_stdout_level{
-	my ( $self, )= @_;
-	select( STDOUT ) or 
-			die "Couldn't reset STDOUT: $!";
-	return 1;
-}
-
-sub clear_warn_level{
-	my ( $self, )= @_;
-	$SIG{__WARN__} = undef;
-	return 1;
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::send_buffer_to_output',
+		message => "Returning from attempt to flush buffer with: $x", } );
+    return $x;
 }
 
 sub clear_buffer{
-	my ( $self, $report_name ) = @_;
-	$self->_set_buffer( $report_name => [], );
-}
-
-sub send_buffer_to_output {
-    my ( $self, $report ) = @_;
+	my ( $self, $report ) = @_;
 	$report //= 'log_file';
-    ### <where> - Reached send_buffer_to_output for report: $report
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::clear_buffer',
+		message => "Reached clear_buffer for report: $report", } );
 	my  $x = 0;
-	if( !$self->has_buffering( $report ) or !$self->get_buffering( $report ) ){
-		if( $self->will_cluck ){
-			cluck "Attempting to send buffer to output when no buffering is in force";
-		}
+	if(	!$self->has_defined_buffering( $report ) or !$self->get_buffering( $report ) ){
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard:clear_buffer',
+			message => "Attempting to clear a buffer to output when no buffering is in force!", } );
+		$self->_set_error_string( "Attempting to empty a buffer when no buffering is in force!" );
+		$x = 0;
 	}else{
-		for( @{$self->get_buffer( $report )} ) {
-			### <where> - Sending: $_
-			my $i = $self->_really_report( $report, $_ );
-			$x += $i;
-		}
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::SwitchBoard::clear_buffer',
+			message => "clearing the buffer ...", } );
+		$self->_set_buffer( $report => [] );
+		$x = 1;
 	}
-    ### <where> - Clearing the buffer
-    $self->clear_buffer( $report );
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::SwitchBoard::clear_buffer',
+		message => "Returning from attempt to clear the buffer with: $x", } );
     return $x;
 }
-	
 
 #########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
 
@@ -372,13 +484,15 @@ has '_data_walker' =>(
 			'Data::Walk::Graft',
 			'Data::Walk::Clone',
 			'Data::Walk::Prune',
+			'Data::Walk::Print',
 		],
 		skipped_nodes =>{
 			OBJECT => 1,
 			CODEREF => 1,
 		},
+		to_string => 1,
 	) },
-	handles =>[ qw(graft_data prune_data ) ],
+	handles =>[ qw(graft_data prune_data print_data ) ],
 	required => 1,
 	init_arg => undef,
 );
@@ -408,174 +522,245 @@ has '_test_buffer' =>(
 	clearer	=> '_clear_all_test_buffers',
 );
 
+has '_last_error' =>(
+    traits	=> ['String'],
+	is		=> 'ro',
+	isa		=> Str,
+	handles	=>{
+        _add_to_error	=> 'append',
+	},
+	default	=> sub{ q{} },
+	clearer	=> '_clear_error_string',
+	writer	=> '_set_error_string',
+);
+
+has '_can_communicate_cash' =>(
+    traits	=> ['Hash'],
+	is		=> 'ro',
+	isa		=> HashRef,
+	handles	=>{
+        _has_can_com_cash	=> 'exists',
+		_set_can_com_cash	=> 'set',
+		_get_can_com_cash	=> 'get',
+	},
+	default	=> sub{ {} },
+	clearer	=> '_clear_can_communicate_cash',
+);
+
+#~ has _debug_filter =>(
+		#~ isa 		=> Bool,
+		#~ writer		=> '_set_debug_filter',
+		#~ predicate	=> 'has_debug_filter',
+		#~ clearer		=> '_turn_debug_off',
+	#~ );
+
 #########1 Private Methods    3#########4#########5#########6#########7#########8#########9
 
 sub _attempt_to_report{
 	my ( $self, $data_ref ) = @_;
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+		message => [ 'Arrived at _attempt_to_report with:', $data_ref ], } );
+	$data_ref->{date_time} = DateTime->now( time_zone => $time_zone );
+	my 	$caller_ref = $self->get_caller( 2 );
+	%$data_ref = ( %$caller_ref, %$data_ref );
+	#~ $data_ref->{message} //= '';
 	my 	$will_die = 0;
-	### <where> - beginning attempt to report ...
-	##### <where> - passed data: @_
-	my 	$report = 'log_file';
-	if( exists $data_ref->{report} ){
-		$report = $data_ref->{report};
-	}elsif( $self->will_cluck ){
-		cluck "No report name provided.  This test will use -log_file-";
+	#~ my 	$report 
+	if( !$data_ref->{report} ){
+		$data_ref->{report}= 'log_file';
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+			message => "No destination report defined will send to 'log_file'" } );
+		$self->_set_error_string( "No destination report defined will send to 'log_file'" );
 	}
-	### <where> - target report is: $report
-	if( exists $data_ref->{level} ){
-		### <where> - level testing is required ...
-		$will_die = 1 if $data_ref->{level} =~ /fatal/i;
-		if( !exists $data_ref->{level_ref} ){
-			### <where> - need to test the namespace ...
-			$data_ref->{level_ref} = $self->_get_permissions( $report );
-			### <where> - new data ref: $data_ref
-			if(	!is_ArrayRef( $data_ref->{level_ref} ) or
-				!exists $data_ref->{level_ref}->{$report}	){
-				### <where> - the action is out of the namespace ...
-				if( $self->will_cluck ){
-					cluck "The -" . $report . 
-							"- report is not defined at this point in the name_space";
-				}
-				return 0;
-			}
-		}
-		my 	$name_space_level = $data_ref->{level_ref}->{$report};
-		### <where> - name space level: $name_space_level
-		if(	!defined $name_space_level ){
-			### <where> - the caller is outside the name space ...
-			if( $self->will_cluck ){
-				cluck "This call is out of the namespace!";
-			}
-			return 0;
-		}
-		my 	$caller_level = $self->_convert_level_name_to_number(
-								$data_ref->{level},
-								$report,
-							);
-		### <where> - caller level: $caller_level
-		if( $caller_level < $name_space_level ){
-			### <where> - the caller is found in the name space but is not loud enough ...
-			if( $self->will_cluck ){
-				cluck "The caller level of -" . $data_ref->{level} .
-						"- is not loud enough to trigger this report at this location " .
-						"in the name space";
-			}
-			return 0;
-		}
-	}else{
-		if( $self->will_cluck ){
-			cluck "No telephone (urgency) level provided ... the report is approved by default";
-		}
-		### <where> - no level testing needed ...
-	}
-	### <where> - see if input is requested ...
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+		message => "Checking for requested input" } );
+	my $x = 0;
 	if( $data_ref->{ask} ){
-		### <where> - input requested ...
-		if( $SIG{__WARN__} ){
-			print STDOUT "Log-Shiras is asking for some input\n";
-		}else{
-			cluck "Log-Shiras is asking for some input";
-		}
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+			message => "Input is requested" } );
+		my	$message =
+				( exists $data_ref->{message} and ref $data_ref->{message} eq 'ARRAY' ) ? 
+					"Adding to message -\n" . join( "\n", @{$data_ref->{message}} ) . "-\n" :
+				( exists $data_ref->{message} ) ? 
+					"Adding to message -$data_ref->{message}-\n" : '';
+		$data_ref->{message} =
+			( ref $data_ref->{message} eq 'ARRAY' ) ?
+				$data_ref->{message} :
+			( $data_ref->{message} ) ?
+				[ $data_ref->{message} ] : [];
+		push @{$data_ref->{message}}, ("Log::Shiras asked for input with: " . $data_ref->{ask});
+		$message .= ( $data_ref->{ask} ) ? ( $data_ref->{ask} . ": " ) :
+			"Log::Shiras is asking for input: ";
+		print STDOUT $message;
 		my 	$input = <>;
 		chomp $input;
-		push @{$data_ref->{message}}, $input;
+		if( $input ){
+			push @{$data_ref->{message}}, $input;
+			$x = $input;
+		}
 	}
-	### <where> - attempt to send the report ...
-	my $x = 0;
-	if( !$data_ref->{dont_report} ){
-		### <where> - sending the output: $data_ref->{message}
-		### <where> - collect the current info ...
-		$data_ref = $self->_get_caller( $data_ref );
-		$data_ref->{date_time} = DateTime->now( time_zone => $time_zone );
-		#### <where> - updated data ref: $data_ref
-		$x = $self->_maybe_report( $report, $data_ref );
-	}
-	### <where> - the end is near? ...
-	if( $will_die ){
-		### <where> - dieing ...
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+		message => [ 'Data ref finalized sending the following to message processing:', $data_ref ], } );
+	my	$y = $self->_buffer_decision( $data_ref );
+	$x	||= $y;
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+		message => [ 'Checking if this is a fatal message:', $data_ref ], } );
+	if( $data_ref->{level} =~ /fatal/i ){
+		no warnings 'uninitialized';
 		my $message =
-			( is_ArrayRef( $data_ref->{message} ) )?
-				join( ' ', @{$data_ref->{message}} ) :
-			( $data_ref->{message} ) ?
-				$data_ref->{message} :
-				'fatal phone call successfully placed';
-		confess $message;
+			( !$data_ref->{message} ) ? "Fatal call sent to the switchboard" :
+			(
+				( ref $data_ref->{message} eq 'ARRAY' ) ?
+					join( ' ', @{$data_ref->{message}} ) :
+					$data_ref->{message} 					) .
+					"<- sent at a 'fatal' level";
+		use warnings 'uninitialized';
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_attempt_to_report',
+			message => "Final fata message: $message", } );
+		croak $message;
 	}
 	return $x;
 }
 
-sub _maybe_report{
-	my ( $self, $report_name, $report_ref ) = @_;
-	### <where> - reached _maybe_report for: $report_name
-	### <where> - check if Test-Log-Shiras is active ...
+sub _buffer_decision{
+	my ( $self, $report_ref ) = @_;
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+			message => [ 'Arrived at _buffer_decision with:', $report_ref ], } );
+		$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+			message => "Checking if Test::Log::Shiras is active ...", } );
 	if( $Test::Log::Shiras::last_buffer_position ){
-		### <where> - sending report line to the test buffer: $report_ref
-		if( !$self->_has_test_buffer( $report_name ) ){
-			$self->_set_test_buffer( $report_name =>[] );
+		if( !$self->_has_test_buffer( $report_ref->{report} ) ){
+			$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+				message => "This is a new buffer request for report " .
+					"-$report_ref->{report}- turning the buffer on!", } );
+			$self->_set_test_buffer( $report_ref->{report} =>[] );
 		}
-		unshift @{$self->_get_test_buffer( $report_name )}, $report_ref;
-		while(	$#{$self->_get_test_buffer( $report_name )} >
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+			message => "Loading the line to the test buffer", } );
+		unshift @{$self->_get_test_buffer( $report_ref->{report} )}, $report_ref;
+		while(	$#{$self->_get_test_buffer( $report_ref->{report} )} >
 				$Test::Log::Shiras::last_buffer_position	){
-			### <where> - dropping the final line off the end ...
-			pop @{$self->_get_test_buffer( $report_name )};
+			$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+				message => "The buffer has outgrown it's allowed size.  Reducing it from: " .
+					$#{$self->_get_test_buffer( $report_ref->{report} )}, } );
+			pop @{$self->_get_test_buffer( $report_ref->{report} )};
 		}					
 	}
 	my $x = 0;
-	if(	$self->has_buffering( $report_name ) and $self->get_buffering( $report_name ) ){
-		### <where> - sending report line to the buffer: $report_ref
-		if( !$self->has_buffer( $report_name ) ){
-			$self->_set_buffer( $report_name =>[] );
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+		message => "Checking if regular Log::Shiras buffer is active for: " .
+			$report_ref->{report}, } );
+	if(	$self->has_defined_buffering( $report_ref->{report} ) and
+		$self->get_buffering( $report_ref->{report} ) 				){
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+			message => "The buffer is active - sending the message to the buffer (not the report).", } );
+		if( !$self->has_buffer( $report_ref->{report} ) ){
+			$self->_set_buffer( $report_ref->{report} =>[] );
 		}
-		push @{$self->get_buffer( $report_name )}, $report_ref;
+		push @{$self->get_buffer( $report_ref->{report} )}, $report_ref;
 		$x = 'buffer';
 	}else{
-		$x = $self->_really_report( $report_name, $report_ref );
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+			message => "The buffer is not active - sending the message to the report.", } );
+		$x = $self->_really_report( $report_ref );
 	}
-	### <where> - returning: $x
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_buffer_decision',
+		message => "Returning: $x", } );
 	return $x;
 }
 
 sub _really_report{
-	my ( $self, $report_name, $report_ref ) = @_;
-	### <where> - reached _really_report for: $report_name
+	my ( $self, $report_ref ) = @_;
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_really_report',
+		message => [ 'Arrived at _really_report with:', $report_ref ], } );
 	my $x = 0;
-	my 	$report_array_ref = $self->get_report( $report_name );
+	my 	$report_array_ref = $self->get_report( $report_ref->{report} );
 	if( $report_array_ref ){
 		for my $report ( @{$report_array_ref} ){
-			### <where> - loading message to: $report
-			### <where> - Sending: $report_ref
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_really_report',
+				message => [ 'sending message to -:' .  $report_ref->{report}, 
+					'with message: ', $report_ref->{message} ], } );
 			$report->add_line( $report_ref );
 			$x++;
 		}
 	}else{
-		$x = "$report_name not active";
+		my $message = "The report name -$report_ref->{report}- does not have any destination instances to use!";
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_really_report',
+			message => $message, } );
+		$self->_set_error_string( $message );
 	}
-	### <where> - returning: $x
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_really_report',
+		message => "Returning: $x", } );
 	return $x;
-}	
+}
 
-sub _get_report_access_levels{
+sub _get_block_unblock_levels{
 	my ( $self, $level_ref, $space_ref ) = @_;
-	### <where> - reached _get_report_access_levels with current space ref: $space_ref
-	### <where> - updating the current level ref: $level_ref
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+		message => [ 'Arrived at _get_block_unblock_levels for:', $space_ref ], } );
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+		message => [ 'Received the level ref:', $level_ref ], } );
 	if( exists $space_ref->{UNBLOCK} ){
-		### <where> - found an UNBLOCK at this level ...
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+			message => [ 'Found an UNBLOCK at this level:', $space_ref->{UNBLOCK} ], } );
 		for my $report ( keys %{$space_ref->{UNBLOCK}} ){
 			$level_ref->{$report} = $space_ref->{UNBLOCK}->{$report};
 		}
-	}else{
-		### <where> - no UNBLOCK here ...
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+			message => [ 'level ref with UNBLOCK changes:', $level_ref ], } );
 	}
+	if( exists $space_ref->{BLOCK} ){
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+			message => "Found a BLOCK at this level.", } );
+		for my $report ( keys %{$space_ref->{BLOCK}} ){
+			delete $level_ref->{$report};
+		}
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+			message => [ 'level ref with BLOCK changes:', $level_ref ], } );
+	}
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_get_block_unblock_levels',
+		message => [ 'Returning the level ref:', $level_ref ], } );
 	return $level_ref;
 }
 
 sub _convert_level_name_to_number{
 	my ( $self, $level, $report ) = @_;
-	### <where> - attempting to convert the level name: $level
-	### <where> - for report: $report
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+		message => "Arrived at _convert_level_name_to_number with level -$level" .
+			"- and report -$report-", } );
 	my 	$x = 0;
 	if( is_elevenInt( $level ) ){
-		### <where> - a number that falls in range was passed: $level
+		$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+			message => "-$level- is already an integer in the correct range.", } );
 		$x = $level;
 	}else{
 		my	$level_ref =
@@ -584,118 +769,220 @@ sub _convert_level_name_to_number{
 				( $self->has_log_level( $report ) ) ?
 					$self->get_log_levels( $report ) :
 					[ @default_levels ] ;
-		if(	!$level_ref and
-			$self->will_cluck ){
-				cluck "After trying several options no level list could be isolated for report -" . 
+		if(	!$level_ref ){
+			$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+				message => "After trying several options no level list could be isolated for report -" . 
 						$report . "-.  Level -" . ( $level // 'UNDEFINED' ) . 
-						"- will be set to 0 (These go to eleven)";
+						"- will be set to 0 (These go to eleven)", } );
 		}else{ 
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+				message =>[ 'Checking for a match to the level ref:', $level_ref ], } );
 			my $found = 0;
 			for my $word ( @$level_ref ){
-				### <where> - checking: $word
-				if( $word and $level =~ /^$word$/i ){
-					$found = 1;
-					last;
-				}else{ 
-					$x++;
+				if( $word ){
+					$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+						name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+						message => "Checking -$word- for a match.", } );
+					if( $level =~ /^$word$/i ){
+						$found = 1;
+						$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+							name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+							message => "-$word- matches -$level-", } );
+						last;
+					}
+				}else{
+					$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+						name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+						message => "Skipping level -$x- since no level urgency word is defined.", } );
 				}
+				$x++;
 			}
-			if( !$found and $self->will_cluck ){
-				cluck "No match was found for the level -" . $level . "- assigned to the report -" .
-						$report . "-";
+			if( !$found ){
+				$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+					message => "No match was found for the level -$level-" .
+					" assigned to the report -$report-", } );
 				$x = 0;
 			}
 		}
 	}
-	### <where> - returning: $x
+	$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_convert_level_name_to_number',
+		message => "Returning -$level- as the integer: $x" } );
 	return $x;
 }
 
-sub _get_permissions{
-	my ( $self, $report, $name_line ) = @_;
-	if( !$name_line	){
-		$name_line = $self->_get_caller->{inside_sub};
-		### <where> - caller is: $name_line
-		if( $self->will_cluck ){
-			cluck "No caller name space provided.  " .
-					"Using the the caller name space -$name_line-.";
+before [ qw( set_buffering remove_buffering ) ] => sub{
+	my ( $self, @buffer_list ) = @_;
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_before_xxx_buffer',
+		message => [ "Stopped 'before' modifying the buffer state with:", @buffer_list ], } );
+	if( $buffer_list[1] and is_Bool( $buffer_list[1] ) ){
+		my %buffer_modifications = @buffer_list;
+		@buffer_list = ();
+		for my $report ( keys %buffer_modifications ){
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_before_xxx_buffer',
+				message => "Testing -$report- with setting: $buffer_modifications{$report}", } );
+			### <where> - report: $report
+			### <where> - level: $self->get_buffering( $report )
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_before_xxx_buffer',
+				message => "Old -$report- with setting: " .
+					( $self->get_buffering( $report ) // 'NULL' ), } );
+			if( !$buffer_modifications{$report} and $self->get_buffer( $report ) ){
+				$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_before_xxx_buffer',
+					message => "Report -$report- needs flushing" } );
+				push @buffer_list, $report;
+			}
 		}
 	}
-	my 	@telephone_name_space = ( split /::/, $name_line );
-	### checking permissions for the name space: @telephone_name_space
-	my 	$source_space = $self->get_name_space;
-	my 	$level_ref = {};
-	### <where> - use the switchboard to collect level rules for this name space ...
-	$level_ref = $self->_get_report_access_levels( $level_ref, $source_space );
-	SPACETEST: for my $next_level ( @telephone_name_space ){
-		### <where> - checking: $next_level
-		if( exists $source_space->{$next_level} ){
-			### <where> - confirmed the next level exists ...
-			$source_space = $source_space->{$next_level};
-			$level_ref =	$self->_get_report_access_levels( 
-								$level_ref, $source_space 
-							);
-		}else{
-			last SPACETEST;
+	my $count = 0;
+	map{ $count += $self->_flush_buffer( $_ ) } @buffer_list;
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_before_xxx_buffer',
+		message => "A total of -$count- messages flushed" } );
+	return $count;
+};
+
+after '_set_whole_name_space' => sub{ __PACKAGE__->_clear_can_communicate_cash };	
+
+sub _flush_buffer{
+	my ( $self, $report ) = @_;
+	my $x = 0;
+	$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_flush_buffer',
+		message => "Arrived at _flush_buffer for: $report", } );
+	if( $self->get_buffer( $report ) ){
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_flush_buffer',
+			message => "There are messages to be flushed for: $report", } );
+		for my $message_ref ( @{$self->get_buffer( $report )} ) {
+			$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_flush_buffer',
+				message => "Sending: $message_ref->{message}", } );
+			my $i = $self->_really_report( $message_ref );
+			$x += $i;
 		}
+		$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_flush_buffer',
+			message => "Clearing the -$report- buffer" , } );
+		$self->clear_buffer( $report );
 	}
-	### <where> - convert the level words to numbers ...
-	for my $key ( keys %$level_ref ){
-		$level_ref->{$key} = 
-			$self->_convert_level_name_to_number( $level_ref->{$key}, $report );
-	}
-	### <where> - level ref: $level_ref
-	return $level_ref;
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_flush_buffer',
+		message => "A total of -$x- messages flushed" } );
+	return $x;
 }
 
-sub _get_caller{
-	my ( $self, $caller_ref ) = @_;
-	### <where> - reached _get_caller ...
-	my $level = 1;
-	my $match_string = '(' . join( '|', @{$self->ignored_callers} ). ')';
-	my @caller_array = caller($level++);
-	my @last_caller;
-	### <where> - checking first name_line: @caller_array
-	##### <where> - against the string: $match_string
-	while ( $caller_array[3] and $caller_array[3] =~ /$match_string/ ){
-		@last_caller = @caller_array;
-		### <where> - level: $level
-		@caller_array = caller($level++);
-		##### <where> - checking new name_line: @caller_array
+sub _can_communicate{
+	my ( $self, $report, $level, $name_string ) = @_;
+	$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+		name_space => 'Log::Shiras::Switchboard::_can_communicate',
+		message => "Arrived at _can_communicate to see if report -$report- " .
+			"will accept a call at the urgency of -$level- from the " .
+			"name-space: $name_string" } );
+	my	$cash_string = $name_string . $report . $level;
+	my $pass = 0;
+	my $x = "Report -$report- is NOT UNBLOCKed for the name-space: $name_string";
+	if( $self->_has_can_com_cash( $cash_string ) ){
+		( $pass, $x ) = @{$self->_get_can_com_cash( $cash_string )};
+	}else{
+		my	$source_space = $self->get_name_space;
+		my 	@telephone_name_space = ( split /::/, $name_string );
+		$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_can_communicate',
+			message => [ 'Consolidating permissions for the name space:', @telephone_name_space ], } );
+		my 	$level_ref = {};
+		$level_ref = $self->_get_block_unblock_levels( $level_ref, $source_space );
+		### <where> - level ref: $level_ref
+		SPACETEST: for my $next_level ( @telephone_name_space ){
+			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_can_communicate',
+				message => "Checking for additional adjustments at: $next_level", } );
+			if( exists $source_space->{$next_level} ){
+				$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_can_communicate',
+					message => "The next level -$next_level- exists", } );
+				$source_space = $source_space->{$next_level};
+				$level_ref =	$self->_get_block_unblock_levels( $level_ref, $source_space );
+				### <where> - level ref: $level_ref
+			}else{
+				$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_can_communicate',
+					message => "Didn't find the next level -$next_level-", } );
+				last SPACETEST;
+			}
+		}
+		### <where> - level ref: $level_ref
+		$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_can_communicate',
+			message => [ 'Final level collection is:', $level_ref ], } );
+		$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_can_communicate',
+			message => "Checking for the report name in the consolidated level ref", } );
+		REPORTTEST: for my $key ( keys %$level_ref ){
+			$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+				name_space => 'Log::Shiras::Switchboard::_can_communicate',
+				message => "Testing: $key", } );
+			if( $key =~ /$report/i ){
+				$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_can_communicate',
+					message => "Matched key to the target report: $report", } );
+				my $allowed 	= $self->_convert_level_name_to_number( $level_ref->{$key}, $report );
+				$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_can_communicate',
+					message => "The allowed level for -$report- is: $allowed", } );
+				my $attempted	= $self->_convert_level_name_to_number( $level, $report );
+				$self->_internal_talk( { report => 'log_file', level => 0,###### Logging
+					name_space => 'Log::Shiras::Switchboard::_can_communicate',
+					message => "The attempted level for -$level- is: $attempted", } );
+				if( $attempted >= $allowed ){
+					$self->_internal_talk( { report => 'log_file', level => 2,###### Logging
+						name_space => 'Log::Shiras::Switchboard::_can_communicate',
+						message => "The message clears for report: $report", } );
+					$pass = 1 ;
+					### <where> - approved report: $report
+				}else{
+					$x = "The destination -$report- is UNBLOCKed but not to the -$level- level at the name space: $name_string";
+				}
+				last REPORTTEST;
+			}
+		}
+		$self->_set_can_com_cash( $cash_string => [ $pass, $x ] );
 	}
-	@$caller_ref{ qw(
-			package filename line subroutine hasargs wantarray
-			evaltext is_require hints bitmask hinthash inside_sub
-		) } = @last_caller;
-	$caller_ref->{inside_sub} = ( $caller_array[3] ) ? $caller_array[3] : 'main' ;
-	### <where> - caller is: $caller_ref
-	return $caller_ref;
+	if( !$pass ){
+		$self->_internal_talk( { report => 'log_file', level => 3,###### Logging
+			name_space => 'Log::Shiras::Switchboard::_can_communicate',
+			message => $x, } );
+		$self->_set_error_string( $x );
+	}
+	return $pass;
 }
 
-#~ sub DESTROY{
-	#~ my ( $self, ) = @_;
-	#~ ### <where> - getting the reports ...
-	#~ ### <where> - current reports: $self->get_reports
-#~ }
-	
-
-#~ sub DEMOLISH{
-	#~ my ( $self, ) = @_;
-	#~ ### <where> - clearing any STDOUT or WARN redirection ...
-	#~ $self->clear_stdout_level;
-	#~ $self->clear_warn_level;
-	#~ ### <where> - current reports: $self->get_reports
-	#~ ### <where> - Flush the buffers TODO ...
-	#~ my $buffer_ref = $self->_buffer;
-	#~ ### <where> - buffer ref: $buffer_ref
-	#~ for my $report ( keys %$buffer_ref ){
-		#~ $self->send_buffer_to_output( $report );
-	#~ }
-#~ }
+sub _internal_talk{
+	my ( $self, $data_ref ) = @_;
+	my $result = 0;
+	my $self_report = $self->self_report;
+	if(	$self->self_report ){
+		$self->set_self_report( 0 );
+		if( $self->_can_communicate( $data_ref->{report}, $data_ref->{level}, $data_ref->{name_space} ) ){
+			my $caller_ref = $self->get_caller( 1 );
+			%$data_ref = ( %$caller_ref, %$data_ref );
+			$data_ref->{date_time} = DateTime->now( time_zone => $time_zone );
+			$result = $self->_attempt_to_report( $data_ref );
+		}
+		$self->set_self_report( $self_report );
+	}
+	return $result;
+}
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 
-no Moose;
+no MooseX::Singleton;
 __PACKAGE__->meta->make_immutable(
 	inline_constructor => 0,
 );
@@ -709,359 +996,412 @@ __END__
 
 =head1 NAME
 
-Log::Shiras::Switchboard - Moose based logging and reporting
+Log::Shiras::Switchboard - Log::Shiras message screening and delivery
 
-=head1 SYNOPSIS
-    
-	#!perl
-	use Modern::Perl;
-	use Log::Shiras::Switchboard 0.013;
-	my $telephone = get_telephone;
-	#Switchboard not active
-	$telephone->talk( message => 'Hello World 0' );
-	my $operator = get_operator( 
-			name_space_bounds =>{
-				main =>{
-					UNBLOCK =>{
-						run => 'warn',
-					},
-				},
-			},
-			reports =>{
-				run =>[
-					Excited::Print->new,
-				],
-			},
-		);
-	$telephone = get_telephone;
-	# use defaults
-	$telephone->talk( message => 'Hello World 1' );
-	$telephone->talk(# level too low
-		report  => 'run',
-		level 	=> 'debug',
-		message => 'Hello World 2',
-	);
-	$telephone->talk(# level OK
-		report  => 'run',
-		level 	=> 'warn',
-		message => 'Hello World 3',
-	);
-	$telephone->talk(# level OK , report wrong
-		report 	=> 'other',
-		level 	=> 'warn',
-		message => 'Hello World 4',
-	);
-
-	package Excited::Print;
-	sub new{
-		bless {}, __PACKAGE__;
-	}
-	sub add_line{
-		shift;
-		my @input = ( ref $_[0] eq 'ARRAY' ) ? @{$_[0]} : @_;
-		chomp @input;
-		print '!!!' . join( ' ', @input ) . "!!!\n";
-	}
-	1;
-        
-    ###############################
-    # Synopsis Screen Output
-    # 01: !!!Hello World 1!!!
-    # 02: !!!Hello World 3!!!
-    ###############################
-#########1#########2#########3#########4#########5#########6#########7#########8#########9
 =head1 DESCRIPTION
 
 L<Shiras|http://en.wikipedia.org/wiki/Moose#Subspecies> - A small subspecies of 
 Moose found in the western United States (of America).
 
-This is a Moose based logger with the ability to run lean or add functionality using a 
-Moose object model.  While no specific element of this logger is unique to the 
-L<sea|https://metacpan.org/search?q=Log> of logging modules on CPAN the API is.  
-Additionally since the package drifts outside of the pure run logging that 
-most loggers implement, I have been brazen enough to use different terms for some 
-familiar concepts from the logging world.  Ultimatly the goal is to provide a base 
-Moose class which can be used (and abused) for general input and output while leveraging 
-some of the really cool flow established in the better logging models in use broadly on 
-CPAN.  Some examples of concepts taken from the logging world include logging levels, 
-logging name_spaces, config file management of logging, output formatting, and realtime 
-input and 
-output adjustements from outside of the information generating code.
+This is the class for message traffic control in the 'Log::Shiras' package.  For a 
+general overview of the whole package see L<the top level documentation 
+|https://metacpan.org/module/Log::Shiras>.  All traffic is managed using L<name-spaces
+|/name_space_bounds> and urgency levels.  The message traffic is (L<mostly
+|https://metacpan.org/module/Log::Shiras::TapPrint>) expected to come from the companion 
+class L<Log::Shiras::Telephone|https://metacpan.org/module/Log::Shiras::Telephone>.  
+This class is also where instances of 'Report' classes are registered ( I suggest using 
+L<Log::Shiras::Report|https://metacpan.org/module/Log::Shiras::Report> as a base from 
+which to build instances ).  Finally, this class maintains the core hook to the 
+L<Test::Log::Shiras|https://metacpan.org/module/Test::Log::Shiras> class.  
 
-A core (and intentional) design decision of this module is to split the functions of input and 
-output handling into separate classes.   This allows the user to define the amount of overhead 
-applied to input and output management.  Additionally for the two separate classes (possibly
-running in separate instances) to communicate seamlessly with each other a third class is created 
-to handle traffic.  This is primarily done through a global variable.  B<Warning this global varaible 
-maintains a global logging name_space that requires conscious managment!>  At least in this initial 
-release very little care is given to protecting an existing running name space from a new logging 
-instance.  It is entirely possible to turn on a new logger and begin to collect information from a 
-name_space that exists in a currently running instance.  Using class names as part of the registered 
-name_space will help (but not fully eliminate) this risk.
+In order to make all these connections 'just work' without requiring you to write all 
+the links explicitly I used L<MooseX::Singleton
+|https://metacpan.org/module/MooseX::Singleton> to manage all these links.  For example, 
+this allows a telephone to be set up without explicitly connecting it to a report at the 
+time the telephone instance is created.  All these desired connections led me to either 
+treat this class as a Singleton or use a global 'our' variable.  I just liked the 
+singleton solution better.  Other (better, broader, or at least more creative) solutions 
+L<are welcome|/Author>.
 
-=head1 TERMS
-
-=head2 Source
-
-=over
-
-=head3 Definition
-
-The timing and location of the information to be collected. 
-
-=head3 Explanation
-
-This term is analogous to "appender" in most logging systems.  Since the 
-goal is to stretch the definition a little, the more generic term "source" is used instead.
-
-=back
-
-=head2 Sink
-
-=over
-
-=head3 Definition
-
-The places and methods used for the endpoint of the collected data. 
-
-=head3 Explanation
-
-This term is analogous to "logger" in most logging systems.  Because the timing 
-of the output and the purpose of the output can vary from a traditional "log" then 
-the term is changed as well.
-
-=back
-
-=head2 Switchboard
-
-=over
-
-=head3 Definition
-
-This is the global connection point for sources and sinks.
-
-=head3 Explanation
-
-The switchboard will only act if it is triggered by the sources.  The sinks will only 
-be engaged if activated by the switchboard.
-
-=back
-
-
-
-##########################################
-
-and 
-formatter roles as desired.  The second part of the L</Synopsis>, L</$thirdinst> 
-shows an example of a heavier implementation of sources with roles added.  
-The question that comes up is why this package over any of the other (more mature) 
-Loggers?  Specifically why not L<Log::Log4perl>?  And why intentionally add Moose 
-overhead into a Logger?
-
-=over
-
-=item B<First>, Developing this Logger was a learning experience.  I don't claim any major 
-conceptual leap here.  I'm just testing my knowledge of Moose and logging.  I do beleive that 
-some of the minor API design decisions that I made here would break backwards compatability 
-on the most popular sinks.
-
-=item B<Second>, the Log4perl buffer doesn't allow for buffer clearance.  
-meaning that I want to choose whether the buffer is loaded to the error file depending 
-on branches in the code.  This allows for line logging as code persues a branch of 
-investigation but then if the branch is later abandoned the logs for that branch can 
-also be abandoned.
-
-=item B<Third>, I wanted to provide some easy methods for directly accessing output used 
-for logging.  Mostly for testing purposes.  Moose and L<Tie::File> did most of the work 
-on this so I added direct access.
-
-=item B<Fourth>, the Log4perl module doesn't handle the header of files that are 
-dropped and then reconnected in the way I would like.  Meaning I only want the header 
-at the top of the file not at the beginning of each connection to a persistant file.  
-This module only loads the header on new files.
-
-=item B<Fifth>, I wanted to be able roll method calls and subroutine references into the 
-line formats.  I do this by using the Parsing::Formatter::ACMEFormat Role.  While the 
-API isn't quite as mature as the Log4perl 'PatternLayout' it does support full 
-sprintf formatting.  (see L<Parsing::sink::Formatter::ACMEFormat> for more details)  
-Moreover, if you don't like my format role just write your own formatting role following 
-the simple parameters listed in L<Parsing::sink::source>.
-
-=item B<Sixth>, why Moose?  Well, first because my uses for this package are not speed 
-critical.  I guess that in combination the ease of writing this, the learning experience, 
-and the flexibility to add sources and formatters with a simple Moose Role far outweighed 
-any speed hit associated with Moose as a technology.  No, I have not yet profiled this for 
-speed optimizations.  Wherever I could I pushed the big time-hits to the startup of the 
-code so that running it would be as fast as possible.
-
-=item B<Seventh>, I wanted a one stop shop for output.  I think there are two standard 
-output types in production code.  First is 'run' logging.  This is the way that code leaves 
-tracks from the ongoing process that it follows.  Second is 'report' logging.  When data is 
-processed the output of that process results in a new data set.  I really liked the flexibility 
-and ease of definition shown in the currently popular logging modules for 'run' logging output 
-and would like to extend that to 'report' logging.  This will allow me to define the 'report' 
-and 'run' outputs in the code that I am writing but extract the destination and handling to a separate 
-location for future flexibility.  Meaning that I wanted to write an output or logging data set 
-into some code and then determine later whether to use it and how to use it.
-
-=back
-
-=head1 DESCRIPTION (How do you use it?)
-
-As a design decision I broke the various main (perceived) elements 
-of logging into descrete objects.
-
-=over
-
-=item B<L<Parsing::sink::TrafficControl>> The core call to output some data is managed 
-with a TrafficControl instance.  TrafficControl instances are built with the auto exported 
-L</get_pointsman> method.  For a script or module to log or report some data you would 
-begin by getting a TrafficControl instance.  ex. my $deputyandy = get_pointsman  
-$deputyandy can then send some traffic using the command L</send_traffic>.  ex. 
-$deputyandy->send_traffic( 'myreport', 'Stuff I want in my report', Data1, Data2 )  
-The TrafficControl instance $deputyandy will then take the first item in the list as 
-the source to use and send the remaining list to that source for processing.  B<Warning> 
-There will be no action if the called source isn't active or the current call from 
-$deputyandy falls outside of the currently active sinkspace boundaries defined in 
-L<Parsing::sink>.
-
-
-=item B<L<Parsing::sink>> When logging is turned on the expected logging is managed in a 
-global variable maintained from Parsing::sink.  B<Any new Parsing::sink instances will 
-attempt to overwrite active data in the global Parsing::sink variable.>  I<See L</is_active> 
-to test for currently active instances.>  If a previous instance is still active call ->new with 
-no attributes and then use the modifiers to add logging requirements.  The risk here of 
-course is logging name_space collisions.  The logging managament is broken into two concepts.  
-Concept one is the collection of outputs labeled L</sources>.  Concept two is the collection 
-of input gates or boundaries labeled L</sinks>.  See the attribute definitions for each to 
-understand the specifics of setting and changing these.  Logging will only occur if,
-
-=over
-
-=item 1. a TrafficControl instance calls 
-
-=item 2. an active source 
-
-=item 3. within an approved logging space 
-
-=item 4. (at the correct logging level for 'run' sinks)
-
-=back
-
-=item B<L<Parsing::sink::source>> Each source is a separate object that is 
-build using the source.  The core source functionality is very minimal but can be 
-significantly expanded using roles that work with the source API.  See the source 
-documentation to understand the use of roles with the source.  sources can run 
-stand alone as needed but when paired with Parsing::sink each built source 
-instance is named and stored in the global Parsing::sink variable and is available 
-for TrafficControl to call.
-
-
-=item B<L<Test::Parsing::sink>> This is an extention of L<Test::Builder::Module>.  
-the exported methods will work directy with any test script and provide TAP outputs per 
-the TAP standard.  When the test module is active it also sets up a global variable 
-that maintains a buffer of logged outputs by source.  Parsing::sink::source will 
-double log the output to the global test buffer if the global variable is active.  
-This allows testing of logged output without programmatically monitoring the source 
-destinations.  If the source is used independently of Parsing::sink then the 
-source output is logged under the name GENERIC for the purposes of this module.
-
-=back
+To get a new instance of this class you need to use the method L<get_operator
+|/get_operator( %args )>.  MooseX::Singleton has some unique creation of an instance of 
+the class (instantiation) requirements because of its nature. The instantiation for this 
+class also requires that attributes be merged in a different way for each attribute type. 
 
 =head2 Attributes
 
-Data passed to ->new when creating an instance.  For modification of these attributes 
-see L</Methods>.  The ->new function will either accept fat comma lists, a complete 
-hash ref that has the possible sources as the top keys, or a YAML based config file 
-that passes a hash ref with sources as top keys.  Possible Combinations of these are 
-on the TODO list.
+Data passed to L<get_operator|/get_operator( %args )> when creating an instance.  For 
+modification of these attributes see the remaining L<methods|/get_caller( $level )> 
+used to act on the operator.
 
-=head3 sources
+=head3 name_space_bounds
 
 =over
 
-=item B<Definition:> this is where all sources for global logging are initially 
-defined.  This module allows for infinite named sources that essentially act as 
-report writers. but there is one special source, the 'run' source, that acts like 
-a traditional Log::Log4perl sink and can only be called by logging level and not name 
-( debug, info, warn, fatal ).  All other sources only have one logging level and are 
-called by name.
-
-=item B<Default> No default provided.  This attribute is required! I<see Range>
-
-=item B<Range> Defined by the called sinks.  You can have more sources built than 
-sinks called but you must always build an source for every called sink or the 
-module will die!  The default source behaviour prints to the screen and joins the 
-passed list with commas.  For modification of this behaviour see the more detailed 
-documentation at L<Parsing::sink::source>.  A basic run source that outputs to 
-the screen and builds the output line with comma joined data from the passed list is 
-defined by:
+B<Definition:> This attribute stores the boundaries set for the name-space management of 
+communications generally from L<Log::Shiras::Telephone
+|https://metacpan.org/module/Log::Shiras::Telephone> message data sources. This includes 
+where in the name-space, to which L<reports|/reports>, and at L<what level|/logging_levels> 
+messages are allows to pass.  Name spaces are stored as a L<hash of hashes
+|http://perldoc.perl.org/perldsc.html#HASHES-OF-HASHES> that goes as deep as needed.  To 
+open collection of a specific 'report' name at a specific point in a name-space then build 
+a hash ref that represents the name-space up to the targeted point and in the value 
+(hashref) for that name-space key add the key 'UNBLOCK' with a hashref value containing 
+report names as keys and the lowest UNBLOCKed urgency level for values.  Each UNBLOCKed 
+report will remain UNBLOCKed at that level and deeper in the name-space until a new UNBLOCK 
+key is listed containing that report with a new urgency level.  To block all reporting 
+deeper in the namespace us the 'BLOCK' key.  The hashref value for a BLOCK key should 
+contain report names but the values of these keys don't matter.  There are a couple of 
+significant points for review;
 
 =over
 
-=item sources => { run =>{} },
-    
+B<*> UNBLOCK and BLOCK should not be used as elements of the defined name-space
+
+B<*> If a caller name-space is not listed or a report name is not explicitly 
+UNBLOCKed then the report is blocked by default.
+
+B<*> Initially the default report name 'log_file' is not UNBLOCKed.  It must be 
+explicitly UNBLOCKed to be used.
+
+B<*> UNBLOCKing or BLOCKing of a report can occur independant of it's existance.  
+This allows the addition of a report later and have it work upon its creation.
+
+B<*> If an UNBLOCK and BLOCK key exist at that same point in a namespace then 
+the hashref associated with the UNBLOCK key is evaluated first and the hashref 
+associated with the BLOCK key is evaluated second.  This means that the BLOCK 
+command can negate a report urgency level setting that the UNBLOCK command 
+just made.
+
+B<*> Any name-space on the same branch (but deeper) as an UNBLOCK command remains 
+UNBLOCKed for the listed report urgency levels until a deeper relevant UNBLOCK or 
+BLOCK is registered.
+
+B<*> When UNBLOCKing a report at a deeper level than an initial UNBLOCK setting the 
+level can be set higher or lower than the initial setting.
+
+B<*> BLOCK commands are only valuable deeper than an initial UNBLOCK command.  All 
+BLOCK commands completly block the report(s) named for that point and deeper  
+independant of the registered urgency value associated with report name in the 
+BLOCK hashref.
+
+B<*> The hash key whos hashref value contains an UNBLOCK hash key is the point in 
+the namespace where the report is UNBLOCKed to the defined level.
+
 =back
-    
+
+B<Default> all caller name-spaces are blocked (no reporting)
+
+B<Range> The caller name-space is stored and searched as a hash of hashes.  No 
+array refs will be correctly read as any part of the name-space definition.  At each 
+level the namespace the switchboard will also recognize the special keys 'UNBLOCK' and 
+'BLOCK' I<in that order>.  As a consequence UNBLOCK and BLOCK are not supported as 
+name-space elements.  Each UNBLOCK (or BLOCK) key should have a hash ref of L<report
+|/reports> name keys as it's value.  The hash ref of report name keys should contain 
+the minimum allowed urgency level down to which the report is UNBLOCKed.  The value 
+associated with any report key in a BLOCK hash ref is not tested since BLOCK closes 
+all reporting from that point and deeper.
+
+B<Example>
+
+	name_space_bounds =>{
+		Name =>{<-- name-space
+			Space =>{<-- name-space
+				UNBLOCK =>{
+					log_file => 'warn'<-- report name and level
+				},
+				Boundary =>{<-- name-space
+					UNBLOCK =>{
+						log_file => 'trace',<-- report name and level changed
+						special_report => 'eleven',<-- report name and level
+					},
+					Place =>{},<-- deeper name-space - log_file still 'trace'
+				},
+			},
+		},
+	}
+
+B<Warning>: All active namespaces must coexist in the singleton.  New object 
+intances can overwrite existing object instances namespaces.  No cross instance 
+name-space protection is done. This requires conscious managment!  I<It is entirely 
+possible to call for another operator that changes reporting for a namespace that 
+was set differently by another active instance.>  Using L<unique names
+|https://metacpan.org/module/Log::Shiras::Telephone#name_space> will help avoid 
+unintentional conflicts.
+		
 =back
 
-=head3 Sinks
+=head3 reports
 
 =over
 
-=item B<Definition:> Think of this as defining the boundaries of logging.  This module 
-essentially thinks of all logging in a HoHoH... name_space.  Unless otherwize provided, 
-the name_space will be defined at the double colin of package names and methods.  For 
-example method 'get_something' in module My::Module would be found in the name_space 
-My=>{ Module=>{ get_something => { sink => logging_definition }, }, },  B<To avoid 
-confusion the name 'sink' is not an allowed name_space> because it is used to define 
-the actions at the boundaries of the logging space.  So if the logging_definition is 
-run => 'debug' in the example above then debug level and higher run sink messages 
-for get_something and higher name_space will be sent to the run sink.
+B<Definition:> This attribute stores report names and associated composed class 
+instances for that name.  The attribute expects a L<hash of arrays
+|http://perldoc.perl.org/perldsc.html#HASHES-OF-ARRAYS>.  Each hash key is the 
+report name and the array contains the report instances associated with that name.  Each 
+passed array element will be tested to see if it is an object that can( 'add_line' ).  
+If not this code will try to coerce the passed reference into an object using 
+L<MooseX::ShortCut::BuildInstance|https://metacpan.org/module/MooseX::ShortCut::BuildInstance>.
 
-=item B<Default> No default provided.  When this is blank no logging occurs
+B<Default> no reports are active.  If a message is sent to a non-existant report 
+name then nothing happens unless L<self reporting|/self_report> is fully enabled.  Then 
+it is possible to collect various warning messages related to the failure of a 
+message.
 
-=item B<Range> There must be an source for every name in the sink boundary calls.  
-sinks and sources can be built on future (not yet existing for TrafficControl) 
-name_spaces.  All defined logging branches can have defined sinks in mid levels 
-but must terminate with some logging definition.
+B<Example>
 
+	reports =>{
+		log_file =>[<-- report name
+				Excited::Print->new,#<-- a reporting instance of a class ( see Synopsis )
+				{#<-- MooseX::ShortCut::BuildInstance definition for a log file
+					package => "Log::File::Shiras"#<-- name this (new) class (for Moosey meta-ness)
+					superclasses => [#<-- build on the base report class
+					   "Log::Shiras::Report"
+					],
+					roles => [#<-- add data formatting and file handling to the class
+					   "Log::Shiras::Report::TieFile"
+					   "Log::Shiras::Report::ShirasFormat",
+					],
+					filename => "file.log",#<-- name the log file
+					header => "Date,File,Subroutine,Line,Data1,Data2,Data3",#<-- set the file header
+					format_string => "%{date_time}P(m=>'ymd')s," .#<-- define the data output format
+						"%{filename}Ps,%{inside_sub}Ps,%{line}Ps,%s,%s,%s",
+				}
+			],
+		other_name =>[],#<-- name created but no report instances added (maybe later?)
+	},
+	
+B<warning:> any re-definition of the outputs for a report name will only push the new 
+report instance onto the existing report array ref.  To remove an existing report output 
+instance you must L<delete|/remove_reports( @report_list )> all report instances and the 
+report name and then re-implement the report name and it's outputs.
+	
 =back
 
-=head2 Exported Methods
-
-These are methods exported into a calling modules or scripts name_space.  Care is taken 
-to only export items that might be called prior to creating a module instance.
-
-=head3 is_active()
+=head3 logging_levels
 
 =over
 
-=item B<Definition:> a stand alone test to see if the global variable for the sink 
-is already activated somewhere else.
+B<Definition:> The urgency level of a message L<can be defined
+|https://metacpan.org/module/Log::Shiras::Telephone#level> by the sender for each 
+message when the message is sent.  Then, in addition to name-space, messages can be 
+filtered by the defined urgency levels.  This attribute stores custom urgency 
+level name lists by report name to be used in place of the default list.  Each level name 
+list associated with the report name is an array of up to twelve (12) elements.  Not all 
+of the elements need to be defined.  There can be gaps between defined levels but 
+counting undefined positions there can never be more than 12 total positions in the level 
+array.  The priority is lowest first to highest last on the list.  Since there are 
+default priority names already in place this attribute is a window dressing setting and 
+not much more.
 
-=item B<Accepts:> Nothing
+B<Default> The default array of priority / urgency levels is; ( L<These go to eleven
+|http://en.wikipedia.org/wiki/Up_to_eleven#Original_scene_from_This_Is_Spinal_Tap> :)
 
-=item B<Returns:> true if the global variable is already activated
+	'trace', 'debug', 'info', 'warn', 'error', 'fatal', 
+	undef, undef, undef, undef, undef, 'eleven',
+
+Any report name without a custom priority array will use the default array. 
+
+B<Example>
+
+	logging_levels =>{
+		log_file =>[ qw(<-- report name (others use the default list)
+				foo
+				bar
+				baz
+				fatal
+		) ],
+	}
+
+B<fatal> The Switchboard will L<die|http://perldoc.perl.org/functions/die.html> 
+for all messages sent with a priority or urgency level that matches qr/fatal/i.  The 
+switchboard will complete all defined logging first before it dies when a 'fatal' level 
+is sent.  'fatal' can be set anywhere in the custom priority list from lowest to highest 
+but fatal is the only one that will die.  (priorities higher than fatal will not die) 
+B<If the message is blocked for the message I<name-space, report, and level> then the 
+code will NOT die.>  If 'fatal' is not found in the custom list then the urgency level 
+of the sent message defaults to the lowest level, meaning the code will not die unless 
+the report is UNBLOCKed to the lowest level at that point in the name-space.
+
+=back
+
+=head3 buffering
+
+=over
+
+B<Definition:> Buffering in this package is only valuable if you want to eliminate some 
+of the sent messages after they were created.  Buffering allows for clearing of sent 
+messages from between two save points.  For this to occur buffering must be on and 
+L<flushes of the buffer|/send_buffer_to_output( $report_name )> to the report need to 
+occur at all known good points.  When some section of prior messages are to be discarded 
+then a L<clear_buffer|/clear_buffer( $report_name )> command can be sent and all buffered 
+messages after the last flush will be discarded.  If buffering is turned off the 
+messages are sent directly to the report for processing with no holding period.  This 
+attribute accepts a hash ref where the keys are report names and the values are boolean 
+where True = on and False = off values.
+
+B<Default> All buffering is off
+
+B<Example>
+
+	buffering =>{
+		log_file => 1,
+	}
+
+=back
+
+=head3 self_report
+
+=over
+
+B<Definition:> This module includes pre-built self reporting messages targeted at the 
+'log_file' report.  The urgency level of these messages range from 'trace' to 'warn'.  
+If you wish to collect any or all of them set this attribute to 1 = on = True, set up the 
+log file report to receive them, and then UNBLOCK the 'log_file' reporting in the 
+targeted name-space to the level of detail that you wish to collect.  Each module in 
+this package has L<a list|/Listing of Internal Name Spaces> of the available namespaces 
+for that module.
+
+B<Default> 0 = off = FALSE
+
+=back
+
+=head3 skip_up_caller
+
+=over
+
+B<Definition:> This module includes a fancied-up call to L<caller EXPR
+|/get_caller( $level )>.  The method in this module adds a second level of caller 
+information above the immediate level called.  While there are several caveats to these 
+calls the most significant is that if you want to ignore some intermediate layers 
+between the called $level and the level above you can add elements to this attribute that 
+will match targeted levels to skip.  The elements of this attribute are matched against 
+the subroutine field.  If all levels above are skipped the last skipped level is still 
+added to the outcome of get_caller( $level ).
+
+B<Default> Match any of the following elements to skip that level.
+
+	qw(
+		^Test::
+		^Capture::
+		\(eval\)
+	)
+	
+B<Accepts:> an ArrayRef of strings or RegularexpRefs
 
 =back
 
 =head2 Methods
 
-Methods are used to manipulate both the public and private attributes of this role.  
-All attributes of this role are set as 'ro' so other than ->new(  ) these methods are
-the only way to change, read, or clear attributes.
-
-=head3 new( sources => { something }, sinks => { something } )
+=head3 get_operator( %args )
 
 =over
 
-=item B<Definition:> The initial call to Parsing::sink
+B<Definition:> This method replaces the call to -E<gt>new or other instantiation 
+methods.  The Log::Shiras::Switchboard class is a L<MooseX::Singleton
+|https://metacpan.org/module/MooseX::Singleton>  and as such needs to be called in a 
+slightly different fashion.  This method can be used to either connect to the existing 
+switchboard or start the switchboard with new settings.  Each call to this method will 
+implement the settings passed in %args merging them with any pre-existing settings.  
+Where pre-existing settings disagree with new settings the new settings take 
+precedence.  So be careful!
 
-=item B<Accepts:> either straight attribute calls or a hashref with the attributes as 
-the top keys.
+B<Accepts:> The 'get_operator' function will accept a string that is either an existing 
+L<YAML|https://metacpan.org/module/YAML> or L<JSON::XS
+|https://metacpan.org/module/JSON::XS> config file name that will be converted into a 
+data ref, it will accept a hash or hash ref that has attributes as the top keys with 
+the attribute settings in the values, or it will accept a hash ref that includes a top 
+key 'conf_file'. In this case the value of that key is processed as either a YAML or 
+JSON file into a hash ref.  The remainer of the passed hash ref is then grafted into 
+the hash retrived from the config file using the L<Data::Walk::Graft 'graft_data'
+|https://metacpan.org/module/Data::Walk::Graft#graft_data-args-arg_ref> function.  
+I<Note that any conflicts between the two will cause the passed hash to overwrite the 
+config file hash using the graft_data rules.>  Acceptable file name extentions are; 
+(.yaml .yml .json .jsn)  This accepts all L<attribute|/Attributes> settings as values 
+attached to keys.
 
-=item B<Returns:> a Parsing sink instance
+B<Returns:> an instance of the Log::Shiras::Switchboard class called an 'operator'.  
+This operator can act on the switchboard to effect any future changes using the 
+remaining methods.
+
+=back
+
+=head3 get_caller( $level )
+
+=over
+
+B<Definition:> This is basically the perl L<caller EXPR
+|http://perldoc.perl.org/functions/caller.html> function repurposed for this class.  If 
+the first attempt comes back empty it will go down one level and then try again.  The 
+method returns a hash ref with following list in key => value pairs that match the 
+queried caller;
+
+	package, filename, line, subroutine, hasargs,
+    wantarray, evaltext, is_require, hints, bitmask, hinthash
+	
+After the base values have been collected the method will try to go up one level to get 
+the first four elements of the previous array.  Because there are cases where intermediate 
+layers don't need to be tracked this class provides and L<attribute that will manage ignored 
+levels|/skip_up_caller> that match the subroutine string.  The method will continue to go up 
+skiping all matching levels until it gets a level without a match or an empty set.  In the 
+empty set case it gives the last level lower even thought it matched.  This additional data 
+is added to the caller hash ref using the 4 caller keys;
+
+	up_package up_file up_line up_sub
+
+B<Accepts:> the stack level to return - (0 is get_caller itself)
+
+B<Returns:> a hash ref of caller values
+
+=back
+
+=head3 get_all_skip_up_callers
+
+=over
+
+B<Definition:> This returns the current list of L<skip_up_caller|/skip_up_caller> values
+
+B<Accepts:> nothing
+
+B<Returns:> an array ref of skip match values
+
+=back
+
+=head3 set_all_skip_up_callers( $array_ref )
+
+=over
+
+B<Definition:> This replaces all the current L<skip_up_caller|/skip_up_caller> list with a 
+new one
+
+B<Accepts:> an array ref of skip elements that are strings or regex refs (qr//)
+
+B<Returns:> $array_ref
+
+=back
+
+=head3 add_skip_up_caller( $skip_value )
+
+=over
+
+B<Definition:> This L<push|http://perldoc.perl.org/functions/push.html>es another value to 
+the existing L<skip_up_caller|/skip_up_caller> list
+
+B<Accepts:> a string or regex ref (qr//)
+
+B<Returns:> nothing
+
+=back
+
+=head3 clear_all_skip_up_callers
+
+=over
+
+B<Definition:> This clears the whole L<skip_up_caller|/skip_up_caller> list
+
+B<Accepts:> nothing
+
+B<Returns:> nothing
 
 =back
 
@@ -1069,124 +1409,44 @@ the top keys.
 
 =over
 
-=item B<Definition:> This will return a HoH's with the sources for the specific logger 
-instance in a data_ref
+B<Definition:> This will return a HoH's with the complete currently active 
+L<name-space bounds|/name_space_bounds>.
 
-=item B<Accepts:> nothing
+B<Accepts:> nothing
 
-=item B<Returns:> a HoH ref
-
-=back
-
-=head3 get_all_sources
-
-=over
-
-=item B<Definition:> This will return a HoH's with all active sources for all Shiras loggers  
-in a data_ref
-
-=item B<Accepts:> nothing
-
-=item B<Returns:> a HoH ref
+B<Returns:> a HoH ref
 
 =back
 
-=head3 has_no_name_space
+=head3 add_name_space_bounds( $ref )
 
 =over
 
-=item B<Definition:> This will check if there are any top level source keys defined
+B<Definition:> This will L<graft
+|https://metacpan.org/module/Data::Walk::Graft#graft_data-args-arg_ref> more name-space 
+boundaries onto the existing name-space.  I<The passed ref will be treated as the 
+'scion_ref' using Data::Walk::Graft.>
 
-=item B<Accepts:> nothing
-
-=item B<Returns:> 1 or 0
+B<Accepts:> a data_ref (must start at the root) of data to graft to the main 
+name_space_bounds ref
+ 
+B<Returns:> The updated name-space data ref
 
 =back
 
-=head3 add_source
+=head3 remove_name_space_bounds( $ref )
 
 =over
 
-=item B<Definition:> This will merge a source definition to the instance source 
-tree and the global source tree.  It uses the L<Data::Walk::Graft> method to add 
-to the source tree definitions.
+B<Definition:> This will L<prune
+|https://metacpan.org/module/Data::Walk::Prune#prune_data-args> the name-space 
+L<boundaries|/name_space_bounds> using the passed name-space ref. I<The passed ref will 
+be treated as the 'slice_ref' using Data::Walk::Prune.>
 
-=item B<Accepts:> HoH with terminators containing LOGGER and 
-
-=item B<Returns:> 1 or 0
-
-=back
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-=head3 clear_sources_and_sinks
-
-=over
-
-=item B<Definition: Warning!> Because the sources and sinks are managed in a global variable 
-they won't clear when the instance is cleared so you have to call this method to clear them
-
-=item B<Accepts:> nothing
-
-=item B<Returns:> 1
-
-=back
-
-=head3 get_name_space
-
-=over
-
-=item B<Definition:> gets the active source instances
-
-=item B<Accepts:> nothing
-
-=item B<Returns:> A hash ref of source intances with the top level keys as the 
-source names
-
-=back
-
-=head3 get_one_source
-
-=over
-
-=item B<Definition:> Retrieve a targeted source instance.  This will allow you to 
-apply source specific methods when needed.
-
-=item B<Accepts:> An source name
-
-=item B<Returns:> Either the source instance or 0
-
-=back
-
-=head3 set_sources( $definitions )
-
-=over
-
-=item B<Definition:> This is a complete reset of all sources.  After the sources 
-set the active sink list will be used to ensure that all needed sources have been 
-defined.
-
-=item B<Accepts:> $definitions is a hashref of names and source definitions.  
-see L<Parsing::sink::source> for more details
-
-=item B<Returns:> the active source list as a hashref or fail
+B<Accepts:> a data_ref (must start at the root) of data used to prune the main 
+name_space_bounds ref
+ 
+B<Returns:> The updated name-space data ref
 
 =back
 
@@ -1194,100 +1454,751 @@ see L<Parsing::sink::source> for more details
 
 =over
 
-=item B<Definition:> This is request to return the HoHoH... sinkspace definition.
+B<Definition:> This will return a HoAoO's with the complete set of registered 
+L<report|/reports> names and their object lists.
 
-=item B<Accepts:> nothing
+B<Accepts:> nothing
 
-=item B<Returns:> the active sinkspace hashref
+B<Returns:> a Hash of Arrays of Objects
 
 =back
 
-=head3 set_sinks( $definitions )
+=head3 get_report( $report_name )
 
 =over
 
-=item B<Definition:> This is a complete reset of the whole sinkspace.
+B<Definition:> This will return an AoO's with the L<report|/reports> objects for that 
+report name.
 
-=item B<Accepts:> $definitions is a hashref representing the sinkspace boundaries
+B<Accepts:> a report name
 
-=item B<Returns:> the called source list from the sinkspace as a hashref 
-with the source names as keys
+B<Returns:> an Array of Object (instances) that are registered for the identified report 
+name.
 
 =back
 
-=head3 add_sinks( $hashref )
+=head3 remove_reports( @report_list )
 
 =over
 
-=item B<Definition:> This uses the L<Parsing::HashRef> 'merge_hashref' function 
-to add to the sink space.  The final sinks space must still pass the 
-sinkspace definitions.
+B<Definition:> This will completely remove the L<report|/reports> name and it's 
+registered object (instances) for each named report.
 
-=item B<Accepts:> A hashref representing new (additional) sinkspace boundaries
+B<Accepts:> a list of report names
 
-=item B<Returns:> the updated (complete) source list from the sinkspace 
-as a hashref with the source names as keys
+B<Returns:> 1
 
 =back
 
-=head3 subtract_sinks( $hashref )
+=head3 add_reports( %args )
 
 =over
 
-=item B<Definition:> This uses the L<Parsing::HashRef> 'prune_hashref' function 
-to remove parts of the sink space.  See the module for more details on how this 
-works.  The final sinks space must still pass the sinkspace definitions.
+B<Definition:> This will add more L<report|/reports> output instances to the existing 
+named report registered instances.  If the items in the passed report list are not already 
+report object instances that -E<gt>can( 'add_line' ) there will be an attempt to build 
+them using L<MooseX::ShortCut::BuildInstance build_instance
+|https://metacpan.org/module/MooseX::ShortCut::BuildInstance#build_instance-args-args>.  
+If (and only if) the report name does not exist then the name will also be added to the 
+report registry.
 
-=item B<Accepts:> A hashref representing the hasref points for pruning
+B<Accepts:> a hash of arrays with the report objects as items in the array
 
-=item B<Returns:> the updated source list from the resulting sinkspace 
-as a hashref with the source names as keys
+B<Returns:> 1
 
 =back
 
-=head3 has_sinks
+=head3 has_log_level( $report_name )
 
 =over
 
-=item B<Definition:> This is a test to see if any sinks are currently named
+B<Definition:> Checks for the existence of a L<custom log level|/logging_levels> array
 
-=item B<Accepts:> nothing
+B<Accepts:> a report name
 
-=item B<Returns:> 1 or 0
+B<Returns:> 1
 
 =back
 
-=head3 clear_sinks
+=head3 add_log_levels( %args )
 
 =over
 
-=item B<Definition:> Clears all active sinkspace
+B<Definition:> This will add L<custom log level|/logging_levels> arrays for report names
 
-=item B<Accepts:> nothing
+B<Accepts:> a L<fat comma|http://perldoc.perl.org/perlop.html#Comma-Operator> list 
+with report names as keys and the level names in an array ref as the values.  B<Existing 
+report names with custom log level arrays will be overwritten>.
 
-=item B<Returns:> true
+B<Returns:> 1
 
 =back
 
-=head2 GLOBAL VARIABLES
+=head3 get_log_levels( $report_name )
 
 =over
 
-=item B<$ENV{Smart_Comments}>
+B<Definition:> This will return the L<custom log level|/logging_levels> names for a given 
+report name in an array ref.  If no custom levels are defined it will return the default 
+level list.
 
-The module uses L<Smart::Comments> if the '-ENV' option is set.  The 'use' is 
-encapsulated in a BEGIN block triggered by the environmental variable to comfort 
-non-believers.  Setting the variable $ENV{Smart_Comments} will load and turn 
-on smart comment reporting.  There are three levels of 'Smartness' available 
-in this module '### #### #####'.
+B<Accepts:> a report name
+
+B<Returns:> an array ref of the defined log levels for that report.
 
 =back
+
+=head3 remove_log_levels( @report_list )
+
+=over
+
+B<Definition:> This will remove the L<custom log level|/logging_levels> list for each 
+report name in the @report_list.  I<The default log levels will therefor come back into 
+force.>
+
+B<Accepts:> a list of report names
+
+B<Returns:> 1
+
+=back
+
+=head3 set_all_log_levels( %args )
+
+=over
+
+B<Definition:> This will reset (from %args) the L<custom log level|/logging_levels> 
+arrays that are in force.  I<All unlisted reports will use the default log levels.>
+
+B<Accepts:> a L<fat comma|http://perldoc.perl.org/perlop.html#Comma-Operator> list with 
+report names as keys and the level names in an array ref as the values.
+
+B<Returns:> %args
+
+=back
+
+=head3 get_all_log_levels
+
+=over
+
+B<Definition:> This will return a hash of arrays with the complete set of 
+L<custom log level|/logging_levels> arrays.
+
+B<Accepts:> Nothing
+
+B<Returns:> a hash ref of array refs
+
+=back
+
+=head3 get_all_buffering
+
+=over
+
+B<Definition:> This will return a hash ref of all managed L<buffer|/buffering> states.
+
+B<Accepts:> Nothing
+
+B<Returns:> a hash ref with the L<report|/reports> names as keys.
+
+=back
+
+=head3 has_defined_buffering( $report_name )
+
+=over
+
+B<Definition:> This will identify if L<buffering|/buffering> has been defined for a given 
+$report_name.
+
+B<Accepts:> a report name
+
+B<Returns:> 1 = True if the report name IS registered (but not necessarily on!)
+
+=back
+
+=head3 set_buffering( %args )
+
+=over
+
+B<Definition:> This will (re)set the L<buffer|/buffering> state for all arguments in 
+%args.
+
+B<Accepts:>  a L<fat comma|http://perldoc.perl.org/perlop.html#Comma-Operator> list 
+with report names as keys and the new (Bool) buffer state as the value for each key.
+
+B<Returns:> 1
+
+=back
+
+=head3 get_buffering( $report_name )
+
+=over
+
+B<Definition:> This will return the L<buffer|/buffering> state associated with the 
+$report_name.
+
+B<Accepts:>  a report name
+
+B<Returns:> a Boolean state associated with the buffer name (1|0)
+
+=back
+
+=head3 remove_buffering( @report_list )
+
+=over
+
+B<Definition:> This will remove L<buffer|/buffering> registration and state for all 
+reports in the list ( @report_list ).
+
+B<Accepts:>  a @report_list
+
+B<Returns:> 1
+
+=back
+
+=head3 send_buffer_to_output( $report_name )
+
+=over
+
+B<Definition:> This will flush the contents of the named report L<buffer|/buffering> 
+to all the report objects.
+
+B<Accepts:>  a $report_name
+
+B<Returns:> The number of times that L<add_line( $message )
+|https://metacpan.org/module/Log::Shiras::Report#add_line-message_ref> was called to 
+complete the buffer flush.
+
+=back
+
+=head3 has_buffer( $report_name )
+
+=over
+
+B<Definition:> This will identify if an actual L<buffer|/buffering> exists for this 
+report name, as opposed to just being turned on.
+
+B<Accepts:>  a $report_name
+
+B<Returns:> A boolean value representing state
+
+=back
+
+=head3 get_buffer( $report_name )
+
+=over
+
+B<Definition:> This will return the L<buffer|/buffering> array ref with all it's 
+contents.  (It will not flush the buffer)
+
+B<Accepts:>  a $report_name
+
+B<Returns:> An array ref of the buffer contents. (pre add_line processed)
+
+=back
+
+=head3 clear_buffer( $report_name )
+
+=over
+
+B<Definition:> This will remove all messages currently in the L<buffer|/buffering> 
+without sending them to the report.
+
+B<Accepts:>  a $report_name
+
+B<Returns:> 1
+
+=back
+
+=head3 self_report
+
+=over
+
+B<Definition:> This will return the L<self_report|/self_report> state of the Switchboard.
+
+B<Accepts:> Nothing (as a method)
+
+B<Returns:> Bool ( 1 = On | 0 = Off )
+
+=back
+
+=head3 set_self_report( $bool )
+
+=over
+
+B<Definition:> This will change the L<self_report|/self_report> state of the Switchboard.
+
+B<Accepts:> $bool ( 1 = On | 0 = Off )
+
+B<Returns:> The new state
+
+=back
+
+=head3 print_data( $ref )
+
+=over
+
+B<Definition:> This is a function brought over from L<Data::Walk::Print
+|https://metacpan.org/module/Data::Walk::Print> with the 'to_string' attribute set to 
+1 (True).  This can be useful in rendering data structures in log statements.  
+B<Beware it is slow! It is better used on the report side than the phone side.>
+
+
+B<Accepts:> a data ref to be turned into a human readable string.  
+See the L<module|https://metacpan.org/module/Data::Walk::Print#print_data-arg_ref-args-data_ref> 
+for full documentation.
+
+B<Returns:> The human readable string.
+
+=back
+
+=head3 graft_data( tree_ref =E<gt> $ref, scion_ref =E<gt> $ref )
+
+=over
+
+B<Definition:> This is a function brought over from L<Data::Walk::Graft
+|https://metacpan.org/module/Data::Walk::Graft>
+
+B<Accepts:> a data ref (scion_ref) for grafting and a tree ref to accept the graft.  
+See the L<module|https://metacpan.org/module/Data::Walk::Graft#graft_data-args-arg_ref> 
+for full documentation.
+
+B<Returns:> The updated tree ref
+
+=back
+
+=head3 prune_data( tree_ref =E<gt> $ref, slice_ref_ref =E<gt> $ref )
+
+=over
+
+B<Definition:> This is a function brought over from L<Data::Walk::Prune
+|https://metacpan.org/module/Data::Walk::Prune>
+
+B<Accepts:> a data ref (slice_ref) for pruning and a tree ref to be pruned.  
+See the L<module|https://metacpan.org/module/Data::Walk::Prune#prune_data-args> 
+for full documentation.
+
+B<Returns:> The updated tree ref
+
+=back
+
+=head1 Self Reporting
+
+This logging package will L<self report|/self_report>.  It is possible to turn on 
+different levels of logging to trace the internal actions of Log::Shiras.  All internal 
+reporting is directed at the 'log_file' report.  In order to receive internal messages 
+B<including warnings>, you need to set the 'self_report' attribute to 1 and then UNBLOCK 
+the correct L<name_space|/name_space_bounds> for the targeted messages.  I determined 
+which level each message should be and sent them with integer equivalent urgencies to 
+allow for possible re-nameing of the log_file to custom levels without causing the self 
+reporting to break.  If you are concerned with availability of messages or dispatched 
+urgency level please let L<me|/AUTHOR> know.
+
+=head2 Listing of Internal Name Spaces
+
+=over
+
+=item Log
+
+=over
+
+=item Shiras
+
+=over
+
+=item Switchboard
+
+=over
+
+=item get_caller
+
+=item add_name_space_bounds
+
+=item remove_name_space_bounds
+
+=item add_reports
+
+=item get_log_levels
+
+=item send_buffer_to_output
+
+=item clear_buffer
+
+=item _attempt_to_report
+
+=item _buffer_decision
+
+=item _really_report
+
+=item _get_block_unblock_levels
+
+=item _convert_level_name_to_number
+
+=item _before_xxx_buffer
+
+=item _flush_buffer
+
+=item _can_communicate
+
+=back
+
+=back
+
+=back
+
+=back
+
+=head1 SYNOPSIS
+
+This is pretty long so I put it at the end
+    
+	#!perl
+	use lib 'lib', '../lib',;
+	use Log::Shiras::Switchboard;
+	use Log::Shiras::Telephone;
+	$| = 1;
+	my $fail_over = 0;# Set fail_over here
+	### <where> - lets get ready to rumble...
+	my $telephone = Log::Shiras::Telephone->new( fail_over => $fail_over );
+	$telephone->talk( message => 'Hello World 0' );
+	### <where> - No printing here (the switchboard is not set up) ...
+	my 	$operator = Log::Shiras::Switchboard->get_operator(
+			#~ self_report => 1,# required to UNBLOCK log_file reporting in Log::Shiras 
+			name_space_bounds =>{
+				main =>{
+					UNBLOCK =>{
+						# UNBLOCKing the quiet, loud, and run reports 
+						# 	at main and deeper
+						#	for Log::Shiras::Telephone->talk actions
+						quiet	=> 'warn',
+						loud	=> 'info',
+						run		=> 'trace',
+					},
+				},
+				Log =>{
+					Shiras =>{
+						Telephone =>{
+							UNBLOCK =>{
+								# UNBLOCKing the log_file report
+								# 	at Log::Shiras::Telephone and deeper
+								#	(self reporting)
+								log_file => 'info',
+							},
+						},
+						Switchboard =>{
+							get_operator =>{
+								UNBLOCK =>{
+									# UNBLOCKing log_file
+									# 	at Log::Shiras::Switchboard::get_operator
+									#	(self reporting)
+									log_file => 'info',
+								},
+							},
+							_flush_buffer =>{
+								UNBLOCK =>{
+									# UNBLOCKing log_file
+									# 	at Log::Shiras::Switchboard::_flush_buffer
+									#	(self reporting)
+									log_file => 'info',
+								},
+							},
+						},
+					},
+				},
+			},
+			reports =>{
+				loud =>[
+					Print::Excited->new,
+				],
+				quiet =>[
+					Print::Wisper->new,
+				],
+				log_file =>[
+					Print::Log->new,
+				],
+				###########  Add a build_instance example
+			},
+			buffering =>{
+				quiet => 1,
+			},
+		);
+	### <where> - sending a message ...
+	$telephone->talk( message => 'Hello World 1' );
+	### <where> - message went to the log_file - didnt print ...
+	$telephone->talk( report => 'quiet', message => 'Hello World 2' );
+	### <where> - message went to the buffer - turning off buffering for the 'quiet' destination ...
+	my 	$other_operator = Log::Shiras::Switchboard->get_operator(
+			buffering =>{ quiet => 0, }, 
+		);
+	### <where> - should have printed what was in the buffer ...
+	$telephone->talk(# level too low
+		report  => 'quiet',
+		level 	=> 'debug',
+		message => 'Hello World 3',
+	);
+	$telephone->talk(# level OK
+		report  => 'loud',
+		level 	=> 'info',
+		message => 'Hello World 4',
+	);
+	### <where> - should have printed here too...
+	$telephone->talk(# level OK , report wrong
+		report 	=> 'run',
+		level 	=> 'warn',
+		message => 'Hello World 5',
+	);
+
+
+	package Print::Excited;
+	sub new{
+		bless {}, shift;
+	}
+	sub add_line{
+		shift;
+		my @input = ( ref $_[0]->{message} eq 'ARRAY' ) ?
+						@{$_[0]->{message}} : $_[0]->{message};
+		my @new_list;
+		map{ push @new_list, $_ if $_ } @input;
+		chomp @new_list;
+		print '!!!' . uc(join( ' ', @new_list)) . "!!!\n";
+	}
+
+
+	package Print::Wisper;
+	sub new{
+		bless {}, shift;
+	}
+	sub add_line{
+		shift;
+		my @input = ( ref $_[0]->{message} eq 'ARRAY' ) ?
+						@{$_[0]->{message}} : $_[0]->{message};
+		my @new_list;
+		map{ push @new_list, $_ if $_ } @input;
+		chomp @new_list;
+		print '--->' . lc(join( ' ', @new_list )) . "<---\n";
+	}
+
+	package Print::Log;
+	sub new{
+		bless {}, shift;
+	}
+	sub add_line{
+		shift;
+		my @input = ( ref $_[0]->{message} eq 'ARRAY' ) ? 
+						@{$_[0]->{message}} : $_[0]->{message};
+		#### <where> - input: @input
+		my @new_list;
+		map{ push @new_list, $_ if $_ } @input;
+		chomp @new_list;
+		printf( "subroutine - %-28s | line - %04d |\n\t:(\t%-31s ):\n", 
+					$_[0]->{up_sub}, $_[0]->{line}, 
+					join( "\n\t\t", @new_list ) 						);
+	}
+	1;
+        
+	#######################################################################################
+	# Synopsis Screen Output for the following conditions
+	#	the self_report attribute is -don't care- (off for speed)
+	# 	the Log::Shiras::Telephone self reporting is BLOCKED
+	# 	the Log::Shiras::Switchboard::get_operator self reporting is BLOCKED
+	# 	the Log::Shiras::Switchboard::_flush_buffer self reporting is BLOCKED
+	#	the fail_over attribute is NOT activated
+	# 01: --->hello world 2<---
+	# 02: !!!HELLO WORLD 4!!!
+	#######################################################################################
+			
+	#######################################################################################
+	# Synopsis Screen Output for the following conditions
+	#	the self_report attribute is -don't care- (off for speed)
+	# 	the Log::Shiras::Telephone self reporting is BLOCKED
+	# 	the Log::Shiras::Switchboard::get_operator self reporting is BLOCKED
+	# 	the Log::Shiras::Switchboard::_flush_buffer self reporting is BLOCKED
+	#	the fail_over attribute is activated
+	# 01: Hello World 0
+	# 02: Hello World 1
+	# 03: --->hello world 2<---
+	# 04: Hello World 3
+	# 05: !!!HELLO WORLD 4!!!
+	# 06: Hello World 5
+	#######################################################################################
+			
+	#######################################################################################
+	# Synopsis Screen Output for the following conditions
+	#	the self_report attribute is activated
+	# 	the Log::Shiras::Telephone self reporting is UNBLOCKED to warn
+	# 	the Log::Shiras::Switchboard::get_operator self reporting is UNBLOCKED to info
+	# 	the Log::Shiras::Switchboard::_flush_buffer self reporting is UNBLOCKED to info
+	#	the fail_over attribute is activated
+	# 01: Hello World 0
+	# 02: subroutine - Log::Shiras::Switchboard::get_operator | line - 0092 |
+	# 03: 	:(	Switchboard finished updating the following arguments: 
+	# 04: 		self_report
+	# 05: 		buffering
+	# 06: 		reports
+	# 07: 		name_space_bounds ):
+	# 08: subroutine - Log::Shiras::Telephone::talk | line - 0065 |
+	# 09: 	:(	No report destination was defined so the message will be sent to -log_file- ):
+	# 10: subroutine - Log::Shiras::Telephone::talk | line - 0071 |
+	# 11: 	:(	No urgency level was defined so the message will be sent at level -11- (These go to eleven) ):
+	# 12: subroutine - Log::Shiras::Telephone::talk | line - 0100 |
+	# 13: 	:(	Message blocked by the switchboard!
+	# 14: 		Report -log_file- is NOT UNBLOCKed for the name-space: main ):
+	# 15: Hello World 1
+	# 16: subroutine - Log::Shiras::Telephone::talk | line - 0071 |
+	# 17: 	:(	No urgency level was defined so the message will be sent at level -11- (These go to eleven) ):
+	# 18: subroutine - Log::Shiras::Telephone::talk | line - 0088 |
+	# 19: 	:(	The message was sent to -buffer- destination(s) ):
+	# 20: subroutine - Log::Shiras::Switchboard::get_operator | line - 0074 |
+	# 21: 	:(	Starting get operator
+	# 22: 		With updates to:
+	# 23: 		buffering ):
+	# 24: subroutine - Log::Shiras::Switchboard::_flush_buffer | line - 07771 |
+	# 25: 	:(	There are messages to be flushed for: quiet ):
+	# 26: --->hello world 2<---
+	# 27:subroutine - Log::Shiras::Switchboard::get_operator | line - 0092 |
+	# 28:	:(	Switchboard finished updating the following arguments: 
+	# 29:		buffering ):
+	# 30: subroutine - Log::Shiras::Telephone::talk | line - 0100 |
+	# 31: 	:(	Message blocked by the switchboard!
+	# 32: 		The destination -quiet- is UNBLOCKed but not to the -debug- level at the name space: main ):
+	# 33: Hello World 3
+	# 34: !!!HELLO WORLD 4!!!
+	# 35: subroutine - Log::Shiras::Telephone::talk | line - 0088 |
+	# 36: 	:(	The message was sent to -1- destination(s) ):
+	# 37: subroutine - Log::Shiras::Telephone::talk | line - 0094 |
+	# 38: 	:(	Message approved by the switchboard but it found no outlet! ):
+	# 39: Hello World 5
+	#######################################################################################
+
+	#######################################################################################
+	# Synopsis Screen Output for the following conditions
+	#	the self_report attribute is activated
+	# 	the Log::Shiras::Telephone self reporting is UNBLOCKED to info
+	# 	the Log::Shiras::Switchboard::get_operator self reporting is UNBLOCKED to info
+	# 	the Log::Shiras::Switchboard::_flush_buffer self reporting is UNBLOCKED to info
+	#	the fail_over attribute is NOT activated
+	# 01: subroutine - Log::Shiras::Switchboard::get_operator | line - 0092 |
+	# 02: 	:(	Switchboard finished updating the following arguments: 
+	# 03: 		self_report
+	# 04: 		buffering
+	# 05: 		reports
+	# 06: 		name_space_bounds ):
+	# 07: subroutine - Log::Shiras::Telephone::talk | line - 0065 |
+	# 08: 	:(	No report destination was defined so the message will be sent to -log_file- ):
+	# 09: subroutine - Log::Shiras::Telephone::talk | line - 0071 |
+	# 10: 	:(	No urgency level was defined so the message will be sent at level -11- (These go to eleven) ):
+	# 11: subroutine - Log::Shiras::Telephone::talk | line - 0100 |
+	# 12: 	:(	Message blocked by the switchboard!
+	# 13: 		Report -log_file- is not UNBLOCKed for the name-space: main ):
+	# 14: subroutine - Log::Shiras::Telephone::talk | line - 0117 |
+	# 15: 	:(	Failover is off and no reporting occured for:
+	# 16:		-->Hello World 1<-- ):
+	# 17: subroutine - Log::Shiras::Telephone::talk | line - 0071 |
+	# 18: 	:(	No urgency level was defined so the message will be sent at level -11- (These go to eleven) ):
+	# 19: subroutine - Log::Shiras::Telephone::talk | line - 0088 |
+	# 20: 	:(	The message was sent to -buffer- destination(s) ):
+	# 21: subroutine - Log::Shiras::Switchboard::get_operator | line - 0074 |
+	# 22: 	:(	Starting get operator
+	# 23: 		With updates to:
+	# 24: 		buffering ):
+	# 25: subroutine - Log::Shiras::Switchboard::_flush_buffer | line - 07771 |
+	# 26: 	:(	There are messages to be flushed for: quiet ):
+	# 27: --->hello world 2<---
+	# 28:subroutine - Log::Shiras::Switchboard::get_operator | line - 0092 |
+	# 29:	:(	Switchboard finished updating the following arguments: 
+	# 30:		buffering ):
+	# 31: subroutine - Log::Shiras::Telephone::talk | line - 0100 |
+	# 32: 	:(	Message blocked by the switchboard!
+	# 33: 		The destination -quiet- is UNBLOCKed but not to the -debug- level at the name space: main ):
+	# 34: subroutine - Log::Shiras::Telephone::talk | line - 0117 |
+	# 35: 	:(	Failover is off and no reporting occured for:
+	# 36: 		-->Hello World 3<-- ):
+	# 37: !!!HELLO WORLD 4!!!
+	# 38: subroutine - Log::Shiras::Telephone::talk | line - 0088 |
+	# 39: 	:(	The message was sent to -1- destination(s) ):
+	# 40: subroutine - Log::Shiras::Telephone::talk | line - 0094 |
+	# 41: 	:(	Message approved by the switchboard but it found no outlet! ):
+	# 42: subroutine - Log::Shiras::Telephone::talk | line - 0117 |
+	# 43: 	:(	Failover is off and no reporting occured for:
+	# 44: 		-->Hello World 5<-- ):
+	#######################################################################################
+
+=head2 SYNOPSIS EXPLANATION
+
+=head3 my $telephone = Log::Shiras::Telephone->new( fail_over => $fail_over )
+
+This obtains an instance of the  L<Telephone
+|https://metacpan.org/module/Log::Shiras::Telephone> class to send messages. It allows 
+two L<attributes|https://metacpan.org/module/Log::Shiras::Telephone#Attributes>
+to be set.  The name_space attribute affects when the message is reported.  The 
+fail_over attribute opens a path to STDOUT for all unreported ->talk messages.  This 
+allows the talk output to be reviewed in development on the fly without setting up a 
+switchboard to see the core message.  a suggestion is to set up a script with a 
+$fail_over variable at the top used for all new telephones.  That way you can change 
+$fail_over in one place and affect the whole script output between debugging and 
+production with a small (1|0) change.
+
+=head3 $telephone->talk( message => 'Hello World 0' )
+
+This is a first attempt to send a message.  Since the switchboard is not set up yet all 
+messages are blocked.  The only time something happens here is if the fail_over attribute 
+is set in the previous step.  If it is on then 'Hello World' goes to STDOUT.  If failover 
+is blocked even the warning messages will not be collected.
+
+=head3 my $operator = Log::Shiras::Switchboard->get_operator( %args )
+
+This uses the get_operator method to get an instance of the 'Switchboard' class and sets 
+the initial switchboard settings.
+
+=head4 self_report => Bool
+
+To access the self reporting features of this package you must turn this on!  As this 
+attribute implies, the whole package has built-in logging messages to follow the action 
+behind the scenes!.  These messages can be captured by UNBLOCKing the name-spaces of 
+interest to the level of detail that you wish.  All internal messages are sent to the 
+'log_file' report name.
+
+=head4 name_space_bounds =>{ %args }
+
+This is where the name-space bounds are defined.  Each UNBLOCK section can unblock many 
+reports to a given urgency level.  Different levels of urgency for each report can be 
+definied for each name-space level.
+
+=head4 reports =>{ %args }
+
+This is where the reports are defined for the switchboard.  Each 'report' key is a 
+L<report|/reports> name addressable by a phone message.  The items in the array ref 
+are report object instances.  For a pre-built class that only needs role modification 
+review the documentation for L<Log::Shiras::Report
+|https://metacpan.org/module/Log::Shiras::Report>
+
+=head4 buffering =>{ %args }
+
+This sets the switchboard buffering state by report name.
+
+=head3 $telephone->talk( report => 'quiet'
+
+This is a third attempt to send a message (with the same phone).  This time the message 
+is approved but it is buffered since the message was sent to a report name with buffering 
+turned on.
+
+=head3 my $other_operator = Log::Shiras::Switchboard->get_operator( buffering =>{ quiet => 0, }, )
+
+This opens another operator instance and sets the 'quiet' buffering to off.  I<This 
+overwrites the original operators setting of on.>  As a consequence the existing buffer 
+contents are flushed to the report instance(s).
+
+=head3 package Print::Log
+
+This is an example of a simple report class that includes formatting of the output.  
+This package includes a default report class and a formatting role that should simplify 
+building these classes.  see L<Log::Shiras::Report
+|https://metacpan.org/module/Log::Shiras::Report>
+
 
 =head1 SUPPORT
 
 =over
 
-=item L<github Data-Walk-Extracted/issues|https://github.com/jandrew/Data-Walk-Extracted/issues>
+L<github Log-Shiras/issues|https://github.com/jandrew/Log-Shiras/issues>
 
 =back
 
@@ -1295,44 +2206,27 @@ in this module '### #### #####'.
 
 =over
 
-=item * Create a (DESTROY) method to kill the active switchboard 
+B<1.> Create a (DESTROY) method to kill the active switchboard
 
-=item * Allow for more than one source per name
+B<2.> Update (DESTROY) to flush the buffer(s) on the way out
 
-=item * Set an attribute for reporting inclusive upward, downward or level only
+B<3.> Create a notation convention for a report instance created in one report name to be 
+used in a different report name array.
 
-=over
+B<4.> Investigate the possibility of an ONLY keyword instead 
+of UNBLOCK - how would this be implemented?
 
-=item - Possibly allow to pick and choose levels to report
+B<5.> Add the top level caller file name to the message meta-data
 
-=back
+B<6.> Add method to pull a caller($x) stack that can be triggered in the namespace 
+boundaries.  Possibly this would be blocked on or off by talk() command (so only the 
+first talk of the method would get it).
 
-=over
+B<7.> Self report appears to be be UNBLOCKED by default?  That's bad - fix it.
 
-=item B<Explanation:> all calls to that source name would be sent to 
-multiple places
+B<8.> Add a no-mirror ask attribute for the switchboard.  (ask but don't log ask requests)
 
-=back
-
-=item * Allow mixed startups with config files and passed arguments
-
-=over
-
-=item B<Explanation:> Allow run time modification of the hashref passed 
-from a YAML config file.  This would most likely be done through the hash 
-merge or prune call.
-
-=back
-
-=item * Provide the ability to pass arguments to a config file
-
-=over
-
-=item B<Explanation:> Allow some parameters to be flexible in a config 
-file and then be added at run time later - I don't know what the priority 
-of this would be if the previous TODO was implemented
-
-=back
+B<9.> Add a :self_report tag to act with a source filter to turn on source filtering
 
 =back
 
@@ -1354,27 +2248,40 @@ it and/or modify it under the same terms as Perl itself.
 The full text of the license can be found in the
 LICENSE file included with this module.
 
-=head1 DEPENDANCIES
+This software is copyrighted (c) 2012 and 2013 by Jed Lund.
+
+=head1 DEPENDENCIES
 
 =over
 
-=item L<Moose>
+L<version|https://metacpan.org/module/version>
 
-=item L<Modern::Perl>
+L<5.010|http://perldoc.perl.org/perl5100delta.html> (for use of 
+L<defined or|http://perldoc.perl.org/perlop.html#Logical-Defined-Or> //)
 
-=item L<MooseX::StrictConstructor>
+L<DateTime|https://metacpan.org/module/DateTime>
 
-=item L<version>
+L<MooseX::Singleton|https://metacpan.org/module/MooseX::Singleton>
 
-=item L<Storable> - dclone
+L<Moose::Exporter|https://metacpan.org/module/Moose::Exporter>
 
-#~ =item L<Hash::Merge>
+L<MooseX::StrictConstructor|https://metacpan.org/module/MooseX::StrictConstructor>
 
-=item L<MooseX::Types::Moose>
+L<MooseX::Types::Moose|https://metacpan.org/module/MooseX::Types::Moose>
 
-=item L<Log::Shiras::Report>
+L<MooseX::ShortCut::BuildInstance|https://metacpan.org/module/MooseX::ShortCut::BuildInstance>
 
-=item L<Log::Shiras::Types>
+L<Data::Walk::Extracted|https://metacpan.org/module/Data::Walk::Extracted>
+
+L<Data::Walk::Prune|https://metacpan.org/module/Data::Walk::Prune>
+
+L<Data::Walk::Print|https://metacpan.org/module/Data::Walk::Print>
+
+L<Data::Walk::Graft|https://metacpan.org/module/Data::Walk::Graft>
+
+L<Data::Walk::Clone|https://metacpan.org/module/Data::Walk::Clone>
+
+L<Log::Shiras::Types|https://metacpan.org/module/Log::Shiras::Types>
 
 =back
 
@@ -1382,18 +2289,24 @@ LICENSE file included with this module.
 
 =over
 
-=item L<Log::Shiras>
+L<Log::Shiras|https://metacpan.org/module/Log::Shiras>
 
-=item L<Log::Shiras::TrafficControl>
+L<Log::Shiras::Telephone|https://metacpan.org/module/Log::Shiras::Telephone>
 
-=item L<Test::Log::Shiras>
+L<Log::Shiras::TapPrint|https://metacpan.org/module/Log::Shiras::TapPrint>
 
-=item L<Log::Log4perl>
+L<Log::Shiras::TapWarn|https://metacpan.org/module/Log::Shiras::TapWarn>
 
-=item L<Log::Dispatch>
+L<Log::Shiras::Report|https://metacpan.org/module/Log::Shiras::Report>
 
-=item L<Log::Report>
+L<Log::Log4perl|https://metacpan.org/module/Log::Log4perl>
+
+L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch>
+
+L<Log::Report|https://metacpan.org/module/Log::Report>
+
+=back
 
 =cut
 
-#################### <where> - main pod documentation end ###################
+#########1#########2 <where> - main pod documentation end  6#########7#########8#########9

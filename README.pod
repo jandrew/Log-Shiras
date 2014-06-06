@@ -2,11 +2,24 @@
 
 More Moose based logging and reporting
 
+=head1 WARNING
+
+Right now this package is kind of a hot mess, but since I am CPAN releasing other packages 
+with debug code embedded in them using this I thought I would at least update it so 
+that it supports the CPAN releases.  I am going through and working on packages in this 
+order; Spreadsheet-XLSX-Reader (this doesn't even pass minimal tests yet) the goal is to get 
+this to a CPAN beta level, Log-Shiras - the API is still alos under a lot of flux and will probably release to 
+CPAN as a Beta - I want to do some self reporting here but I still haven't wrapped my head around 
+the deep recursion problem yet, MooseX-ShortCut-BuildInstance - if I fix the Log-Shiras deep 
+recursion I want to propagate the fix into this package too,  Data-Walk-Extracted - this also 
+shares the deep recursion problem - I would also like to switch this from a recursive parser to 
+a stack trace parser so that it takes less memory.
+
 =head1 SYNOPSIS
     
 	#!perl
-	use Modern::Perl;
-	use Log::Shiras::Switchboard;
+	use Modern::Perl; 
+	use Log::Shiras::Switchboard 0.013;
 	my	$operator = get_operator(
 		{
 			reports => {# Can be replaced with a config file
@@ -104,16 +117,16 @@ More Moose based logging and reporting
 	1;
         
 	#####################################################################################
-	# Synopsis output in phone.csv
+	#    Synopsis output in phone.csv
 	# 01:Name,Area_Code,Number
 	# 02:Jenny,,867-5309
 	#
-	# Synopsis output in test.csv
-	# Date,File,Subroutine,Line,Data1,Data2,Data3
-	# 2012-12-31,Log-Shiras-example.pl,main,72,humpty,dumpty,had
-	# 2012-12-31,Log-Shiras-example.pl,main::test_sub,87,Scooby,Dooby,Do
-	# 2012-12-31,Log-Shiras-example.pl,main,80,and,Scrappy,too!
-	# 2012-12-31,Log-Shiras-example.pl,Activity::call_someone,99,calling,Jenny,867-5309
+	#    Synopsis output in test.csv
+	# 01:Date,File,Subroutine,Line,Data1,Data2,Data3
+	# 02:DD/MM/YYYY,t\Log-Shiras-example.pl,main,69,humpty,dumpty,had
+	# 03:DD/MM/YYYY,t\Log-Shiras-example.pl,main::test_sub,84,Scooby,Dooby,Do
+	# 04:DD/MM/YYYY,t\Log-Shiras-example.pl,main,77,and,Scrappy,too!
+	# 05:DD/MM/YYYY,t\Log-Shiras-example.pl,Activity::call_someone,95,calling,Jenny,867-5309
 	#####################################################################################
 
 
@@ -124,33 +137,33 @@ Moose found in the western United States (of America).
 
 This is a Moose based logger with the ability to run lean or add functionality using a 
 Moose object/role model.  While no individual element of this logger is unique to the 
-L<sea|https://metacpan.org/search?q=Log> of logging modules on CPAN the API 
-and scope of intent is somewhat different.  The goal is to provide a base (set) of Moose 
-class(s) which can be used (and abused) for general input and output management.  The 
-base use-case for this package is to allow debug reporting and module output to be 
+L<sea|https://metacpan.org/search?q=Log> of logging modules on CPAN the combination 
+of features and implementation is different.  The goal is to provide a base (set) of 
+Moose class(s) which can be used (and abused) for general input and output management.  
+The base use-case for this package is to allow debug reporting and module output to be 
 directed to multiple different locations and be able to manage these flows with 
-centralized logger-style name-space definitions.  This package is most related to 
-L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch>.
+centralized logger-style name-space definitions.  This package is most related in 
+concept to L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch>.
 
 Since this package makes a few implementation choices differently from the
 traditional run of logging packages, I felt that it made sense to introduce some new 
 terms to explain the differences.  To do this I leveraged (loosely) the old telephone 
 switchboard process.  The new terms are switchboard, operator, phone, and talk.  Ideas 
 largely unchanged from the logging world include logging levels, logging name spaces, 
-config file management of logging, and configurable output formatting.  Overall, it is 
-not clear that any individual detail of the implementation is new.  The difference 
-lies the combination.
+config file management of logging, and configurable output formatting. 
 
 The majority of the need for new terms springs from a core (and intentional) design 
 decision to split the functions of traffic management, output handling, and input 
 handling into separate classes.  First, the traffic management class is called a 
-L</Switchboard>.  Second, the data capture and retention class is called a 
-L</Report>.  The separation of these two classes creates the opportunity to mix, 
-match, modify, and pare output (Report) management as desired.  Finally, there is a 
-third class called a L</Telephone> but the instances of this class should be generated 
-by the 'get_telephone' function of the Switchboard class.  As you might guess the 
-telephone instance is used to talk to Report class objects when connected through 
-the switchboard for call routing and availability.
+L</Switchboard>.  Second, the data retention class is called a L</Report>.  Having 
+a separate report class allows for multiple instances of the class to be recognized 
+by the 'Switchboard'.  Also, since it is a Moose class behaviour is modified just by 
+adding roles.  Finally, there is a third class called a L</Telephone>.  As you 
+might guess both the 'Telephone' and the 'Report' are built using the 'Switchboard' 
+so that they are all connected for call routing and message clearance. 
+
+Overall, it is not clear that any individual detail of the implementation is new.  
+The difference lies in the combination of these features.
 
 =head1 NEW TERMS
 
@@ -159,22 +172,21 @@ the switchboard for call routing and availability.
 =head3 Definition
 
 This is the Moose Class that manages the traffic between L</Telephone>s 
-and L</Report>s.  This is where routing configuration from a traditional logger 
-would go.  This is a MooseX::Singleton Class which seemd to be the best alternative 
-to the global variable that I would have otherwise used for signal handling.  
-B<Warning - Multiple connections to the Switchboard Singleton can be active and 
-none of the namespace definitions from one connection are protected against 
-meddling by other connections.  So ... it would be entirely possible to for one 
-connection to clobber some other connections name space definitions!>  One 
-potential way to handle logging namespace collisions is to use custom class names 
-in the content generation modules with 
+and L</Report>s.  Telephones and Reports are also created/connected through this 
+class since ultimatly the class needs to know something about each one.  This is 
+also where routing configuration from a traditional logger would go.  This is a 
+L<MooseX::Singleton|https://metacpan.org/module/MooseX::Singleton> Class which 
+seemed to be the best alternative to the global variable that I would have 
+otherwise used for signal handling.  B<Warning - Multiple connections to the 
+Switchboard Singleton can be active and none of the namespace definitions from 
+one connection are protected against meddling by other connections.  So ... it 
+would be entirely possible to for one connection to clobber some other connections 
+name space definitions!>  One potential way to handle logging namespace collisions 
+is to use custom class names in the content generation modules with 
 L<MooseX::ShortCut::BuildInstance|http://search.cpan.org/~jandrew/MooseX-ShortCut-BuildInstance/lib/MooseX/ShortCut/BuildInstance.pm>.  
-Another way is to define a custom reporting name space for each telephone to 
-operate in when first obtaining each telephone.
-
-=head3 Documentation
-
-L<Log::Shiras::Switchboard|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm>
+Another way is to define custom reporting name-spaces for each telephone so 
+that separate telphones will never appear to occupy the same space.  This custom 
+name-space can be defined as one of the %args when calling 'get_telephone'.
 
 =head2 Operator
 
@@ -182,9 +194,8 @@ L<Log::Shiras::Switchboard|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Sh
 
 The operator is an instance that will allow code to interact with the Switchboard 
 singleton.  The switchboard routings can either be defined when the operator is 
-created or by method calls against the operator over time.  The initial call to create 
-an operator will accept a config file in YAML or JSON format.  Additional configuration 
-changes to the Switchboard are done through the operator.
+created or updated by method calls against the operator over time.  The initial 
+call to create an operator will also accept a config file in YAML or JSON format.
 
 =head3 Creation
 
@@ -194,10 +205,10 @@ changes to the Switchboard are done through the operator.
 
 =head3 Definition
 
-This is the object instance placed in standalone code used to 
-L<place a call|/Place a call (talk)> to a L</Report>. This is analogous to the 
-'$logger' concept from L<Log::Log4perl|https://metacpan.org/module/Log::Log4perl>.  
-The phone is provided by the switchboard and comes from the switchboard pre-wired.
+This is used in standalone code to L<place a call|/Place a call (talk)> to a 
+L</Report>. This is analogous to the '$logger' concept from 
+L<Log::Log4perl|https://metacpan.org/module/Log::Log4perl>.  The phone is 
+provided by the switchboard and comes from the switchboard pre-wired.
 
 =head3 Creation
 
@@ -212,11 +223,11 @@ Reports are assigned names by the switchboard with the possibility of having an
 array of reports assigned the same name.  If a telephone makes a call to a report 
 name then each report with that name receives the message passed from the telephone.  
 All formatting is done by report instance allowing for variations in filtering and 
-formatting differences between reports for the same message.
+formatting differences between reports of the same name.
 
 =head3 Use
 
-	$report_instance->add_line( %message );
+	$report_instance->add_line( %message );#Generally managed by the switchboard
 
 =head2 Place a call (talk)
 
@@ -234,8 +245,11 @@ report.  There are several options for this call.
 =item B<level:> this is the calling level of the message (default is the maximum)
 
 =item B<other:> the report can have a formatter attached that will use other keys 
-from this message to either add content or manage output format.  The talk command 
-will attempt to coerce this input to a hashref.
+from this message to either add content or manage output format of the message.  
+The talk command will attempt to coerce this input to a hashref if it is not sent 
+that way.  Additionally the L</Switchboard> will automatically add a certain amount 
+of L<caller|http://perldoc.perl.org/functions/caller.html> information for parsing 
+by a formatter.
 
 =back
 
@@ -251,16 +265,17 @@ of these unique in detail but in a group I think they represent something differ
 
 =head2 Buffer behavior
 
-This package has a report buffer (default off) that will allow for some messages to 
-be discarded after they were collected based on branches in the code.  A use case 
-for this is when you are recursivly parsing some logic but only want to log the actions 
-in the path that yeilded results.
+This package has a report buffer (default off) for each report name.  This allows 
+for some messages to be discarded after they were collected based on branches in the 
+code.  A use case for this is when you are recursivly parsing some logic but only 
+want to log the actions in the path that yeilded results.
 
 =head2 Test::Log::Shiras
 
-A dedicated test module that will capture messages at the switchboard level rather 
-than requiring a connection to the final destination of the report to review output.  
-This leverages the buffering behavior above.
+A dedicated test module for testing logged messages that will capture messages at 
+the switchboard level rather than requiring a connection to the final destination 
+of the report to review output.  This leverages the buffering behavior above.  
+The test methods include several ways of checking for output existence.
 
 =head2 Headers
 
@@ -270,10 +285,11 @@ doesn't do this.
 
 =head2 Custom formatting
 
-I wanted to be able to send method calls and subroutine references as part of the 
-line formats.  The 'ShirasFormat' Role for Reports does that.  While the API isn't 
-quite as mature as Log4perl's 'PatternLayout' it does support full sprintf formatting.  
-Since this is a Role if you don't like it you won't be burdened.
+I wanted to be able to consume method calls and code references in the formatted 
+output.  The 'Log::Shiras::ShirasFormat' Role for the L</Report> class does just 
+that.  While the API isn't as mature as Log4perl's 'PatternLayout' it does support 
+full perl sprintf formatting.  I<Since this is a Role if you don't like it you don't 
+have to add it>.
 
 =head2 L<Moose|https://metacpan.org/module/Moose::Manual>
 
@@ -283,15 +299,29 @@ may tip you one way or the other.  I like Moose.
 
 =head2  Multiple output paths
 
-I wanted a one stop shop for output.  I mentally group output from code into two 
-categories.  First is 'log_file' output.  This is the way that code leaves tracks 
-from the ongoing process that it follows.  Second is 'report' output.  This is when 
-data is generated by code for consumption elsewhere.  I really liked the flexibility 
-and ease of definition shown in the currently popular logging modules for 'log_file' 
-output and wanted to extend that to 'report' output.  This package allows me to define 
-(multiple) 'report' and 'log_file' outputs in the code in the same way.  The ability 
-to extract final destination, level activation, and formatting out of the core 
-data generation code is attractive to me.
+I wanted a one stop shop for file outputs.  I mentally group file outputs from 
+code into two categories.  First is 'log_file' output.  This is the way that code 
+leaves tracks from the ongoing process that it follows.  Second is 'report' output.  
+This is when data is generated by code for consumption elsewhere.  Like 
+L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch> this allows me to do 
+both through one interface.
+
+=head1 Some things don't change
+
+=over
+
+=item B<flexibility:> General flexibility and ease of definition for configuration 
+through either files or data structures.
+
+=item B<Separation of concerns:> Separation of output creation and collection 
+definitions.
+
+=item B<namespaces:> Output level screening by namespace.  This includes the 
+possibility of custom level definitions by namespace.
+
+=item B<sprintf:> sprintf formtting
+
+=back
 
 =head1 Install from Source
 
@@ -315,7 +345,7 @@ Then (adjusting make for your installation of perl)
 
 	perl Makefile.PL
 	make
-	make test
+	#~ make test #not passing!!!
 	make install
 	make clean
 
