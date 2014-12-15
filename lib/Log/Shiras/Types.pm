@@ -1,33 +1,31 @@
 #!perl
 package Log::Shiras::Types;
+use version; our $VERSION = version->declare("v0.018.002");
 
 use Carp qw( confess );
 if( $ENV{ Smart_Comments } ){
 	use Smart::Comments -ENV;
 	### Smart-Comments turned on for Log-Shiras-Types ...
 }
-use version 0.94; our $VERSION = qv('0.013_01');
 use YAML::Any qw( Dump LoadFile );
 use JSON::XS;
-use Moose::Util qw( with_traits );
 use MooseX::Types -declare => [ qw(
         posInt
 		elevenArray
 		elevenInt
-		newmodifier
-		acmeformat
-		sprintfformat
+		shirasformat
         textfile
         headerstring
-		reportobject
 		yamlfile
 		jsonfile
 		argshash
+		reportobject
+		namespace
 		
+		newmodifier
 		filehash
     ) ];
-		#~ producerformat
-		#~ newtypeformat
+		#~ sprintfmodifier
 use MooseX::Types::Moose qw(
         Int
         ArrayRef
@@ -35,29 +33,17 @@ use MooseX::Types::Moose qw(
 		Str
 		Object
     );
-use lib '../../../../MooseX-ShortCut-BuildInstance/lib';
-use MooseX::ShortCut::BuildInstance 0.003;
+use MooseX::ShortCut::BuildInstance;
+use lib '../../../lib', '../../lib';
+#~ with 'Log::Shiras::Caller';
+#~ use Log::Shiras::Switchboard;
+#~ my	$switchboard = Log::Shiras::Switchboard->instance;
 
 #########1 Package Variables  3#########4#########5#########6#########7#########8#########9
 
 my	$standard_char	= qr/[csduoxefgXEGbB]/;		# Legacy conversions not supported
 my	$producer_char	= qr/[pn%]/;  				# sprintf standards that don't take arguments
-my	$new_type_char	= qr/[MP]/;					# M = method style, P = passed data style 
-#~ my	$modifier_char	= qr/[MP0-9\s+#v\-]/;#     (new format type callout)
-#~ my	$test_list		=[ qw(
-		#~ sprintf producer unknown string
-	#~ ) ];
-#~ my  $test_dispatch	={
-		#~ sprintf		=> sub{ is_sprintfformat( $_[0]->{'formatchar'} ) },
-		#~ producer	=> sub{ is_producerformat( $_[0]->{'formatchar'} ) },
-		#~ unknown		=> sub{ $_[0]->{'formatchar'} },
-		#~ string		=> sub{ 1 },
-	#~ };
-#~ my 	$format_dispatch ={
-		#~ sprintf		=> \&_process_sprintf_format,
-		#~ producer 	=> \&_process_producer_format,
-		#~ string		=> sub{ $_[0] },
-	#~ };
+my	$new_type_char	= qr/[MPO]/;				# M = method style, P = passed data style, O = object style
 my	$split_regex	= qr/
         ([^%]*)							# inserted string
         (%([^%]*?)			# get modifiers
@@ -66,7 +52,7 @@ my	$split_regex	= qr/
     /x;
 my	$sprintf_dispatch =[
 		[ \&_append_to_string, ],# 0
-		[ \&_does_not_consume, \&_append_to_string, ], # 1
+		[ \&_alt_position, \&_does_not_consume, \&_append_to_string, ], # 1
 		[ sub{ $_[1] }, ],# pass through # 2
 		[ sub{ $_[1] }, ],# pass through # 3
 		[ \&_append_to_string, \&_set_consumption, ], # 4
@@ -82,7 +68,7 @@ my	$sprintf_dispatch =[
 		[ sub{ $_[1] }, ],# pass through # 14
 		[ \&_append_to_string, \&_set_consumption, ], # 15
 		[ \&_append_to_string, ], # 17
-		[ \&_does_not_consume, \&_set_insert_call, ], # 18
+		[ \&_test_for_position_change, \&_does_not_consume, \&_set_insert_call, ], # 18
 		[ sub{ $_[1] }, ],# pass through # 19
 		[ \&_append_to_string, \&_set_consumption, ], # 20
 		[ \&_append_to_string, ], # 21
@@ -92,7 +78,7 @@ my	$sprintf_dispatch =[
 my  $sprintf_regex 	= qr/
 		\A[%]      					# (required) sequence start
         ([\s\-\+0#]{0,2})       	# (optional) flag(s)
-        ([1-9]\d*\$)?				# (optional) get the formatted value
+        ([1-9]\d*\$)?				# (optional) get the formatted value from
 									#		some position other than the next position
         (((\*)([1-9]\d*\$)?)?		# (optional) vector flag with optional index and reference
 			(v))?					#		for gathering a defined vector separator
@@ -102,19 +88,24 @@ my  $sprintf_regex 	= qr/
         ((\.)(                  	# (optional) maximum field width formatting
 			(\*)|					# 		get field from input with possible position call
             ([0-9]\d*)		))?		# 		fixed field size definition
-			($new_type_char)?		#		get input from a method or passed source
+			($new_type_char)?		# (optional) get input from a method or passed source
 		(							# (required) conversion type
 			($standard_char)|		#		standard character
 			($producer_char)	)	#		producer character
         \Z                  		# End of the line
     /sxmp;
+my	$shiras_format_ref = { 
+		final 		=> 1,
+		alt_input 	=> 1,
+		bump_list	=> 1,
+	};
 my  $textfileext    = qr/[.](txt|csv)/;
 my  $yamlextention	= qr/\.(?i)(yml|yaml)/;
 my  $jsonextention	= qr/\.(?i)(jsn|json)/;
 my  $coder 			= JSON::XS->new->ascii->pretty->allow_nonref;#
 my 	$switchboard_attributes = [ qw(
 		name_space_bounds reports buffering 
-		ignored_caller_names will_cluck logging_levels
+		conf_file logging_levels
 	) ];
 
 #########1 SubType Library    3#########4#########5#########6#########7#########8#########9
@@ -135,14 +126,11 @@ subtype newmodifier, as Str,
     where{ $_ =~ /\A$new_type_char\Z/sxm },
     message{ "'$_' does not match $new_type_char" };
 
-subtype sprintfformat, as Str,
-    where{ $_ =~ /\A$standard_char\Z/sxm },
-    message{ "'$_' does not match $standard_char" };
-
-subtype acmeformat, as HashRef,
+subtype shirasformat, as HashRef,
+	where{ _has_shiras_keys( $_ ) },
     message { $_ };
 
-coerce acmeformat, from Str,
+coerce shirasformat, from Str,
     via {
         my ( $input, ) = @_;
 		### <where> - passed: $input
@@ -150,7 +138,7 @@ coerce acmeformat, from Str,
 		my $escape_off = 1;
 		### <where> - check for a pure sprintf string
 		if( $input !~ /{/ ){
-			### <where> - no need to parse this string ...
+			### <where> - no need to pre parse this string ...
 			return { final => $input };
 		}else{
 			### <where> - manage new formats ...
@@ -164,22 +152,22 @@ coerce acmeformat, from Str,
 					push @{$finished_ref->{init_parse}}, $pre;
 					$start = 0;
 				}elsif( $pre ){
-					return "Coersion to 'acmeformat' failed for section -$pre- in " . 
+					return "Coersion to 'shirasformat' failed for section -$pre- in " . 
 						__FILE__ . " at line " . __LINE__ . ".\n";
 				}
 				if( $post =~ /^([^{]*){([^}]*)}(.)(\(([^)]*)\))?(.*)$/ ){
 					my @list = ( $1, $2, $3, $4, $5, $6 );
 					### <where>- list: @list
 					if( !is_newmodifier( $list[2] ) ){
-						return "Coersion to 'acmeformat' failed because of an unrecognized " .
-							"modifier -$list[2]- found in format string -$post- by ".
-							__FILE__ . " at line " . __LINE__ . ".\n";
+						return "Coersion to 'shirasformat' failed because of an " .
+						"unrecognized modifier -$list[2]- found in format string -" .
+						$post . "- by ". __FILE__ . " at line " . __LINE__ . ".\n";
 					}
 					push @{$finished_ref->{alt_input}}, [ @list[1,2,4] ];
 					push @{$finished_ref->{init_parse}}, join '', @list[0,2,5];
 				}elsif( $post =~ /[{}]/ ){
-					return "Coersion to 'acmeformat' failed for section -$post- using " .
-						__FILE__ . " at line " . __LINE__ . ".\n";
+					return "Coersion to 'shirasformat' failed for section -$post- " .
+					"using " . __FILE__ . " at line " . __LINE__ . ".\n";
 				}else{
 					push @{$finished_ref->{init_parse}}, $post;
 				}
@@ -197,8 +185,9 @@ coerce acmeformat, from Str,
 			### <where> - matched: @list
 			### <where> - for segment: $&
 			if( $list[2] and $list[4] and $list[4] eq '%' ){
-				return "Coersion to 'acmeformat' failed for the segment: " . $list[1] .
-					" using " . __FILE__ . " at line " . __LINE__ . ".\n";
+				return "Coersion to 'shirasformat' failed for the segment: " . 
+					$list[1] . " using " . __FILE__ . " at line " . 
+					__LINE__ . ".\n";
 			}
 			my  $pre_string				= $list[0];
 			$finished_ref->{string}   .= $list[0] if $list[0];
@@ -218,7 +207,7 @@ coerce acmeformat, from Str,
 			### <where> - producer: $producer_format
 			### <where> - consumer: $consumer_format
 			if( $finished_length != $parsed_length ){
-				return "Coersion to 'acmeformat' failed for the modified " .
+				return "Coersion to 'shirasformat' failed for the modified " .
 					"sprintf segment -$pre_match- using " .
 					__FILE__ . " at line " . __LINE__ . ".\n";
 			}
@@ -236,6 +225,7 @@ coerce acmeformat, from Str,
 				return $finished_ref;
 			}
 			delete $finished_ref->{new_chunk};
+			#### <where> - current: $finished_ref
 			$x++;
 			### <where> - current input: $input
         }
@@ -273,7 +263,7 @@ coerce acmeformat, from Str,
 
 subtype textfile, as Str,
     message {  "$_ does not have the correct suffix (\.txt or \.csv)"   },
-    where {  $_ =~ /$textfileext\Z/sxm  };
+    where {  $_ =~ /$textfileext\Z/sxm };
 
 subtype headerstring, as Str,
     where{  !$_ or $_ !~ /[\n\r]/sxm  },
@@ -289,7 +279,7 @@ coerce headerstring, from Str,
         } else {
             return "Can not coerce -$_- into a 'headerstring' since it is " .
 				"a -" . ref $_ . "- ref (not a string) using " .
-				"Log::Shiras::Types 'acmeformat' line " . __LINE__ . ".\n";
+				"Log::Shiras::Types 'shirasformat' line " . __LINE__ . ".\n";
         }
     };
 	
@@ -351,21 +341,42 @@ coerce reportobject, from filehash,
 		return build_instance( %$_ );
 	};
 	
-#~ coerce reportobject, from yamlfile,
-	#~ via{ 
-		#~ ### <where> - the passed value is: $_
-		#~ my $filehash = to_filehash( $_ );
-		#~ return build_instance( %{$filehash} );
-	#~ };
+subtype namespace, as Str,
+	where{
+		my  $result = 1;
+		$result = 0 if( !$_ or $_ =~ / / );
+		return $result;
+	},
+	message{ 
+		my $passed = ( ref $_ eq 'ARRAY' ) ? join( '::', @$_ ) : $_;
+		return "-$passed- could not be coerced into a string without spaces";
+	};
 	
-#~ coerce reportobject, from jsonfile,
-	#~ via{ 
-		#~ ### <where> - the passed value is: $_
-		#~ my $filehash = to_filehash( $_ );
-		#~ return build_instance( %{$filehash} );
-	#~ };
+coerce namespace, from ArrayRef,
+	via{ return join( '::', @$_ ) };
+		
 
 #########1 Private Methods	  3#########4#########5#########6#########7#########8#########9
+
+sub _has_shiras_keys{
+	my ( $ref ) =@_;
+	### <where> - passed information is: $ref
+	my 	$result = 1;
+	if( ref $ref eq 'HASH' ){
+		### <where> - found a hash ref...
+		for my $key ( keys %$ref ){
+			### <where> - testing key: $key
+			if( !(exists $shiras_format_ref->{$key}) ){
+				### <where> - failed at key: $key
+				$result = 0;
+				last;
+			}
+		}
+	}else{
+		$result = 0;
+	}
+	return $result;
+}
 
 sub _process_sprintf_format{
     my ( $ref ) = @_;
@@ -384,13 +395,15 @@ sub _process_sprintf_format{
 					#~ ### <where> - running method: $method
 					$ref = $method->( $item, $ref );
 					### <where> - updated ref: $ref
+					return $ref if ref $ref ne 'HASH';
 					$i++;
 				}
 			}
 			$x++;
 		}
     } else {
-        $ref = "Failed to match -" . $ref->{new_chunk} . "- as a (modified) sprintf chunk";
+        $ref = "Failed to match -" . $ref->{new_chunk} . 
+					"- as a (modified) sprintf chunk";
     }
     ### <where> - after _process_sprintf_format: $ref
     return $ref;
@@ -451,7 +464,9 @@ sub _set_insert_call{
 	];
 	if( $item_ref->{alt_input}->[$item_ref->{alt_position}]->[2] ){
 		my $dispatch = undef;
-		for my $value ( split /,|=>/, 	$item_ref->{alt_input}->[$item_ref->{alt_position}]->[2] ){
+		for my $value ( 
+			split /,|=>/, 	
+				$item_ref->{alt_input}->[$item_ref->{alt_position}]->[2] ){
 			$value =~ s/\s//g;
 			$value =~ s/^['"]([^'"]*)['"]$/$1/g;
 			### <where> - value: $value
@@ -467,11 +482,29 @@ sub _set_insert_call{
 		}
 	}
 	$item_ref->{alt_input}->[$item_ref->{alt_position}] = { commands => $new_ref };
-	$item_ref->{alt_input}->[$item_ref->{alt_position}]->{start_at} = ( exists $item_ref->{bump_list} ) ?
-		$#{$item_ref->{bump_list}} + 1 : 0 ;
+	$item_ref->{alt_input}->[$item_ref->{alt_position}]->{start_at} = 
+		( exists $item_ref->{bump_list} ) ?
+			$#{$item_ref->{bump_list}} + 1 : 0 ;
 	$item_ref->{alt_position}++;
 	### <where> - item ref: $item_ref
-	#~ my $wait = <>;
+	return $item_ref;
+}
+
+sub _test_for_position_change{
+	my ( $item, $item_ref ) = @_;
+	### <where> - reached _test_for_position_change with: $item
+	if( exists $item_ref->{conflict_test} ){
+		$item_ref = "You cannot call for alternative location pull -" .
+		$item_ref->{conflict_test} . "- and get data from the -$item- " .
+		"source in shirasformat type coersion at line " . __LINE__ . ".\n";
+	}
+	return $item_ref;
+}
+
+sub _alt_position{
+	my ( $item, $item_ref ) = @_;
+	### <where> - reached _alt_position with: $item
+	$item_ref->{conflict_test} = $item if $item;
 	return $item_ref;
 }
 
@@ -492,44 +525,290 @@ Log::Shiras::Types - The MooseX::Types library for Log::Shiras
 
 =head1 SYNOPSIS
     
-    #! C:/Perl/bin/perl
-    package Log::Shiras::Report::MyRole;
+	#! C:/Perl/bin/perl
+	package Log::Shiras::Report::MyRole;
 
-    use Modern::Perl;#suggested
-    use Moose::Role;
-    use Log::Shiras::Types v0.11 qw(
-        someimportedtype# This is not a real type.  Read the code for actual options!!!
-        otherimportedtype# This is not a real type.  Read the code for actual options!!!
-    );
-    
-    has 'someattribute' =>(
-            isa     => someimportedtype,#Note the lack of quotes
-        );
-    
-    sub valuetestmethod{
-        my ( $self, $value ) = @_;
-        return is_otherimportedtype( $value );
-    }
+	use Modern::Perl;#suggested
+	use Moose::Role;
+	use Log::Shiras::Types v0.013 qw(
+		shirasformat
+		jsonfile
+	);
 
-    no Moose::Role;
+	has	'someattribute' =>(
+			isa     => shirasformat,#Note the lack of quotes
+		);
 
-    1;
+	sub valuetestmethod{
+		return is_jsonfile( 'my_file.jsn' );
+	}
+
+	no Moose::Role;
+
+	1;
 
 =head1 DESCRIPTION
 
 This is the custom type class that ships with the L<Log::Shiras> package.  
-Wherever possible errors to coersions are passed back to the type so coersion 
+Wherever possible errors to coercions are passed back to the type so coersion 
 failure will be explained.
 
 There are only subtypes in this package!  B<WARNING> These types should be 
 considered in a beta state.  Future type fixing will be done with a set of tests in 
-the test suit of this package.  (currently none are implemented)
+the test suit of this package.  (currently few are implemented)
 
 See L<MooseX::Types> for general re-use of this module.
 
-=head1 BUGS
+=head1 Types
 
-L<Github|https://github.com/jandrewlund>
+=head2  posInt
+
+=over
+
+=item B<Definition: >all integers equal to or greater than 0
+
+=item B<Coercions: >no coersion available
+
+=back
+
+=head2  elevenInt
+
+=over
+
+=item B<Definition: >any posInt less than 11
+
+=item B<Coercions: >no coersion available
+
+=back
+
+=head2  elevenArray
+
+=over
+
+=item B<Definition: >an array with up to 12 total positions [0..11] 
+L<I<This one goes to eleven>|https://en.wikipedia.org/wiki/This_Is_Spinal_Tap>
+
+=item B<Coercions: >no coersion available
+
+=back
+
+=head2  shirasformat
+
+=over
+
+=item B<Definition: >this is the core of the L<Log::Shiras::Report::ShirasFormat> module.  
+When prepared the final 'shirasformat' definition is a hashref that contains three keys;
+
+=over
+
+=item B<final> - a sprintf compliant format string
+
+=item B<alt_input> - an arrayref of input definitions and positions for all the additional 
+'shirasformat' modifications allowed
+
+=item B<bump_list> - a record of where and how many new inputs will be inserted 
+in the passed data for formatting the sprintf compliant string
+
+=back
+
+In order to simplify sprintf formatting I approached the sprintf definition as having 
+the following sequence;
+
+=over
+
+=item B<Optional - Pre-string, > any pre-string that would be printed as it stands 
+(not interpolated)
+
+=item B<Required - %, >this indicates the start of a formating definition
+
+=item B<Optional - L<Flags|http://perldoc.perl.org/functions/sprintf.html#flags>, > 
+any one or two of the following optional flag [\s\-\+0#] as defined in the sprintf 
+documentation.
+
+=item B<Optional - 
+L<Order of arguments|http://perldoc.perl.org/functions/sprintf.html#order-of-arguments>, >
+indicate some other position to obtain the formatted value.
+
+=item B<Optional - 
+L<Vector flag|http://perldoc.perl.org/functions/sprintf.html#vector-flag>, >to treat 
+each input character as a value in a vector then you use the vector flag with it's 
+optional vector separator definition.
+
+=item B<Optional - 
+L<Minimum field width|http://perldoc.perl.org/functions/sprintf.html#(minimum)-width>, >
+This defines the space taken for presenting the value
+
+=item B<Optional - 
+L<Maximum field width|http://perldoc.perl.org/functions/sprintf.html#precision%2c-or-maximum-width>, >
+This defines the maximum length of the presented value.  If maximum width is smaller 
+than the minimum width then the value is truncatd to the maximum width and presented 
+in the mimimum width space as defined by the flags.
+
+=item B<Required - 
+L<Data type definition|http://perldoc.perl.org/functions/sprintf.html#sprintf-FORMAT%2c-LIST>, >
+This is done with an upper or lower case letter as described in the sprintf documentation.  Only 
+the letters defined in the sprintf documentation are supported.  These letters close the 
+sprintf documentation segment started with '%'.
+
+=back
+
+The specific combination of these values is defined in the perldoc 
+L<sprintf|http://perldoc.perl.org/functions/sprintf.html>.
+
+The module ShirasFormat expands on this definitions as follows;
+
+=over
+
+=item B<Word in braces {}, > just prior to the L</Data type definition> you can 
+begin a sequence that starts with a word (no spaces) enclosed in braces.  This word will 
+be the name of the source data used in this format sequence.
+
+=item B<Source indicator qr/[MP]/, > just after the L</Word in braces {}> you must indicate 
+where the code should look for this information.  There are only two choices;
+
+=over
+
+=item B<P> - a passed value in the message hash reference.  The word in braces should be an 
+exact match to a key in the message hashref. The core value used for this shirasformat 
+segemnt will be the value assigned to that key.
+
+=item B<M> - a method name to be discovered by the class.  I<This method must exist at the 
+time the format is set!>  When the Shiras format string is set the code will attempt to 
+locate the method and save the location for calling this method to speed up implementation of 
+ongoing formatting operations.  If the method does not exist when the format string is 
+set even if it will exist before data is passed for formatting then this call will fail.  
+if you want to pass a closure (subroutine reference) then pass it as the value in the mesage 
+hash L<part 
+of the message ref|/a passed value in the message hash reference> and call it with 'P'.
+
+=back
+
+=item B<Code pairs in (), following the source indicator> often the passed information 
+is a code reference and for that code to be useful it needs to accept input.  These code 
+pairs are a way of implementing the code.  The code pairs must be in intended use sequence.  
+The convention is to write these in a fat comma list.  There is no limit to code pairs 
+quatities. There are three possible keys for these pairs;
+
+=over
+
+=item B<m> this indicates a method call.  If the code passed is actually an object with 
+methods then this will call the value of this pair as a method on the code.
+
+=item B<i> this indicates regular input to the method and input will be provided to a 
+method using the value as follows;
+
+	$method( 'value' )
+
+=item B<l> this indicates lvalue input to the method and input will be provided to a 
+method using the value as follows;
+
+	$method->( 'value' )
+	
+=item B<[value]> Values to the methods can be provided in one of three ways. A B<string> 
+that will be sent to the method directly. An B<*> to indicate that the method will consume 
+the next value in the passed message array ref.  Or an B<integer> indicating how many of the 
+elements of the passed messay array should be consumed.  When elements of the passed 
+message array are consumed they are consumed in order just like other sprintf elements.
+
+=back
+
+When a special shirasformat segment is called the braces and the Source indicator are 
+manditory.  The code pairs are optional.
+
+=item B<Coercions: >from a modified sprintf format string
+
+=back
+
+=back
+
+=head2  textfile
+
+=over
+
+=item B<Definition: >a file name with a \.txt or \.csv extention that exists
+
+=item B<Coercions: >no coersion available
+
+=back
+
+=head2  headerstring
+
+=over
+
+=item B<Definition: >a string without any newlines
+
+=item B<Coercions: >if coercions are turned on, newlines will be stripped (\n\r)
+
+=back
+
+=head2  yamlfile
+
+=over
+
+=item B<Definition: >a file name with a qr/(\.yml|\.yaml)/ extention that exists
+
+=item B<Coercions: >none
+
+=back
+
+=head2  jsonfile
+
+=over
+
+=item B<Definition: >a file name with a qr/(\.jsn|\.json)/ extention that exists
+
+=item B<Coercions: >none
+
+=back
+
+=head2  argshash
+
+=over
+
+=item B<Definition: >a hashref that has at least one of the following keys
+
+	name_space_bounds
+	reports
+	buffering 
+	ignored_caller_names
+	will_cluck
+	logging_levels
+	
+This are the primary switchboard settings.
+
+=item B<Coersion >from a L</jsonfile> or L</yamlfile> it will attempt to open the file 
+and turn the file into a hashref that will pass the argshash criteria
+
+=back
+
+=head2  reportobject
+
+=over
+
+=item B<Definition: >an object that passes $object->can( 'add_line' )
+
+=item B<Coersion 1: >from a hashref it will use 
+L<MooseX::ShortCut::BuildInstance|http://search.cpan.org/~jandrew/MooseX-ShortCut-BuildInstance/lib/MooseX/ShortCut/BuildInstance.pm> 
+to build a report object if the necessary hashref is passed instead of an object
+
+=item B<Coersion 2: >from a L</jsonfile> or L</yamlfile> it will attempt to open the file 
+and turn the file into a hashref that can be used in L</Coersion 1>.
+
+=back
+
+=head1 GLOBAL VARIABLES
+
+=over
+
+=item B<$ENV{Smart_Comments}>
+
+The module uses L<Smart::Comments> if the '-ENV' option is set.  The 'use' is 
+encapsulated in an if block triggered by an environmental variable to comfort 
+non-believers.  Setting the variable $ENV{Smart_Comments} in a BEGIN block will 
+load and turn on smart comment reporting.  There are three levels of 'Smartness' 
+available in this module '###',  '####', and '#####'.
+
+=back
 
 =head1 TODO
 
@@ -537,13 +816,21 @@ L<Github|https://github.com/jandrewlund>
 
 =item * write a test suit for the types to fix behavior!
 
+=item * write a set of tests for combinations of %n and {string}M
+
 =item * add a log error and clear option rather than fail for type testing
+
+=item * Convert to L<Type::Tiny>
 
 =back
 
 =head1 SUPPORT
 
-L<Github|https://github.com/jandrewlund>
+=over
+
+=item L<Github Log-Shiras/issues|https://github.com/jandrew/Log-Shiras/issues>
+
+=back
 
 =head1 AUTHOR
 
@@ -551,7 +838,7 @@ L<Github|https://github.com/jandrewlund>
 
 =item Jed Lund 
 
-=item jandrewlund@hotmail.com
+=item jandrew@cpan.org
 
 =back
 
@@ -567,21 +854,21 @@ LICENSE file included with this module.
 
 =over
 
-=item L<Modern::Perl>
-
-=item L<Carp>
+=item L<Carp> - confess
 
 =item L<Smart::Comments>
 
 =item L<version>
 
-=item L<YAML::Any>
+=item L<YAML::Any> - ( Dump LoadFile )
 
-=item L<Moose::Util>
+=item L<JSON::XS>
 
 =item L<MooseX::Types>
 
 =item L<MooseX::Types::Moose>
+
+=item L<MooseX::ShortCut::BuildInstance> - 0.003
 
 =back
 
@@ -589,10 +876,12 @@ LICENSE file included with this module.
 
 =over
 
+=item L<Smart::Comments> - is used if the -ENV option is set
+
 =item L<MooseX::Types::Perl>
 
 =back
 
 =cut
 
-#################### main pod documentation end #####################
+#########1 Main POD ends      3#########4#########5#########6#########7#########8#########9

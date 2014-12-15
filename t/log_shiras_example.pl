@@ -1,13 +1,13 @@
 #!perl
-use Modern::Perl;
 use lib
 		'../lib', 'lib', 
 		'../../Data-Walk-Extracted/lib',
 		'../Data-Walk-Extracted/lib';# 
-use Log::Shiras::Switchboard 0.013;
-my	$operator = get_operator(
-	{
-		reports => {# Can be replaced with a config file
+use Log::Shiras::Switchboard;
+use Log::Shiras::Telephone;
+my	$operator = Log::Shiras::Switchboard->get_operator(
+	{# Can be replaced with a config file
+		reports => {
 			log_file => [
 				{
 					roles => [
@@ -37,6 +37,17 @@ my	$operator = get_operator(
 					],
 					header => "Name,Area_Code,Number",
 					package => "Phone::Report"
+				},
+				{
+					roles => [
+					   "Log::Shiras::Report::ShirasFormat",
+					],
+					format_string => "Loading -%3\$s- in the phone book for -%1\$s-",
+					superclasses => [
+					   "Log::Shiras::Report"
+					],
+					package => "Phone::Log",
+					to_stdout => 1
 				}
 			]
 		},
@@ -51,6 +62,15 @@ my	$operator = get_operator(
 					}
 				}
 			},
+			Special =>{
+				Name =>{
+					Space =>{
+						UNBLOCK => {
+							killer => "warn"
+						}
+					}
+				}
+			},
 			Activity => {
 				call_someone => {
 					UNBLOCK => {
@@ -62,10 +82,11 @@ my	$operator = get_operator(
 		},
 		buffering => {
 			log_file => 1
-		}
+		},
+		#~ will_cluck => 1,
 	}
 );
-my	$telephone = get_telephone;
+my	$telephone = Log::Shiras::Telephone->new;
 	$telephone->talk( 
 		level => 'debug', report => 'log_file', 
 		message =>[ qw( humpty dumpty sat on a wall ) ] 
@@ -81,10 +102,14 @@ my	$telephone = get_telephone;
 	$telephone->talk( message =>['and', 'Scrappy', 'too!'] );
 	Activity->call_someone( 'Jenny', '', '867-5309' );
 	$operator->send_buffer_to_output( 'log_file' );
+my	$phone = Log::Shiras::Telephone->new( 'Special::Name::Space' );
+	$phone->talk( message => "Not done yet!", level => 'debug', report => 'killer' );
+	$phone->talk( message => "Not done yet!", level => 'warn', report => 'killer' );#No actual report!
+	$phone->talk( message => "The code is done!", level => 'fatal', report => 'killer' );
 	
 sub test_sub{
 	my @message = @_;
-	my $phone = get_telephone;
+	my $phone = Log::Shiras::Telephone->new;
 	$phone->talk( level => 'debug', report => 'log_file', message =>[ @message ] );
 }
 
@@ -93,7 +118,7 @@ use Log::Shiras::Switchboard;
 
 sub call_someone{
 	shift;
-	my $phone = get_telephone;
+	my $phone = Log::Shiras::Telephone->new;
 	my $output;
 	$output .= $phone->talk( report => 'phone_book', message => [ @_ ], );
 	$output .= $phone->talk( 'calling', @_[0, 2] );

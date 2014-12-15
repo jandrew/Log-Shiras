@@ -7,11 +7,14 @@ More Moose based logging and reporting
 Right now this package is kind of a hot mess, but since I am CPAN releasing other packages 
 with debug code embedded in them using this I thought I would at least update it so 
 that it supports the CPAN releases.  I am going through and working on packages in this 
-order; Spreadsheet-XLSX-Reader (this doesn't even pass minimal tests yet) the goal is to get 
-this to a CPAN beta level, Log-Shiras - the API is still alos under a lot of flux and will probably release to 
-CPAN as a Beta - I want to do some self reporting here but I still haven't wrapped my head around 
-the deep recursion problem yet, MooseX-ShortCut-BuildInstance - if I fix the Log-Shiras deep 
-recursion I want to propagate the fix into this package too,  Data-Walk-Extracted - this also 
+order; L<Spreadsheet-XLSX-Reader|https://github.com/jandrew/Spreadsheet-XLSX-Reader> (this 
+doesn't even pass minimal tests yet) the goal is to get this to a CPAN beta level, 
+L<Log-Shiras|https://github.com/jandrew/Log-Shiras> - the API is still also under a lot of 
+flux and will probably release to CPAN as a Beta - I want to do some self reporting here but 
+I still haven't wrapped my head around the deep recursion problem yet, 
+L<MooseX-ShortCut-BuildInstance|https://github.com/jandrew/MooseX-ShortCut-BuildInstance> 
+- if I fix the Log-Shiras deep recursion I want to propagate the fix into this package too,  
+L<Data-Walk-Extracted|https://github.com/jandrew/Data-Walk-Extracted> - this also 
 shares the deep recursion problem - I would also like to switch this from a recursive parser to 
 a stack trace parser so that it takes less memory.
 

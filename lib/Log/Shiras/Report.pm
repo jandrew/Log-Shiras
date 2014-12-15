@@ -1,4 +1,5 @@
 package Log::Shiras::Report;
+use version; our $VERSION = version->declare("v0.20.2");
 
 use Moose;
 use MooseX::StrictConstructor;
@@ -6,7 +7,6 @@ if( $ENV{ Smart_Comments } ){
 	use Smart::Comments -ENV;#'###', '####'
 	### Smart-Comments turned on for Log-Shiras-Report ...
 }
-use version 0.94; our $VERSION = qv('0.007_001');
 use Carp qw( cluck );
 use MooseX::Types::Moose qw(
         Bool
@@ -20,11 +20,11 @@ use MooseX::Types::Moose qw(
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
-has or_print =>(
+has to_stdout =>(
 	is 		=> 'ro',
 	isa 	=> Bool,
 	default	=> 0,
-	writer	=> 'set_or_print',
+	writer	=> 'set_to_stdout',
 );
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
@@ -49,16 +49,18 @@ sub add_line {
 		#### <where> - Sending traffic to the formatter: $message_ref
 		$line = $self->_use_formatter( $message_ref );
 	}else{
+		no warnings 'uninitialized';
 		$line = join ',', @{$message_ref->{message}};
+		use warnings 'uninitialized';
 	}
 	### <where> - acting on the line: $line
-	if( $self->can( '_load_appender' ) ){
-        #### <where> - an appender role is active - sending the line to the appender
-        $self->_load_appender( $line );
-    }elsif( $self->or_print ){
+	if( $self->to_stdout ){
 		### <where> - no appender or buffer active - printing line ...
 		print STDOUT "$line\n";
-	}
+	}elsif( $self->can( '_load_appender' ) ){
+        #### <where> - an appender role is active - sending the line to the appender
+        $self->_load_appender( $line );
+    }
     return $line;
 }
 
@@ -335,7 +337,7 @@ the only way to change, read, or clear attributes.
 
 =back
 
-=head3 add_line( @input )
+=head3 add_line( $message_ref )
 
 =over
 

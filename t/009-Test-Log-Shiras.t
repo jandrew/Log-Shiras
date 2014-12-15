@@ -11,7 +11,7 @@ use Capture::Tiny 0.12 qw(
 		capture_stderr
 		capture
 	);
-use lib '../lib', 'lib', '../../Data-Walk-Extracted/lib';
+use lib '../lib', 'lib';
 use Test::Log::Shiras 0.009;
 use Log::Shiras::Switchboard 0.013;
 my  ( $test_inst, $expected_count, $operator, $telephone, );

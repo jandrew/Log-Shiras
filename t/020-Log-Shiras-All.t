@@ -7,8 +7,6 @@ use Capture::Tiny 0.12 qw(
 	capture_stderr
 	capture_stdout
 );
-use YAML::Any;
-#~ use JSON::XS;
 BEGIN{
 	#~ $ENV{ Smart_Comments } = '### #### #####';
 }
@@ -16,23 +14,20 @@ if( $ENV{ Smart_Comments } ){
 	use Smart::Comments -ENV;
 }
 $| = 1;
+use MooseX::ShortCut::BuildInstance 0.003;
 use lib
-		'../lib', 'lib', 
-		'../../Data-Walk-Extracted/lib',
-		'../Data-Walk-Extracted/lib';# 
+		'../lib', 'lib';# 
 use Log::Shiras::Switchboard 0.013;
 use Log::Shiras::Report 0.007;
 use Log::Shiras::Report::ShirasFormat 0.007;
 use Log::Shiras::Report::TieFile 0.007;
-use MooseX::ShortCut::BuildInstance 0.003;
 
 my(
-			$wait, 
 			$operator,
 			$telephone,
 			$report,
 			$phone_book,
-);# $deputyandy, $firstinst, $testinst, $secondinst, $newclass, $newmeta, $capturefilename
+);
 my  		@exported_methods = qw(
 				get_operator
 				get_telephone

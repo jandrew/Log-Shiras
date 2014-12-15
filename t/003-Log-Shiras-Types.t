@@ -3,12 +3,14 @@
 
 use Test::More;
 use lib '../lib', 'lib';
-use Log::Shiras::Types v0.013 qw(
+use Log::Shiras::Types 0.018 qw(
 			posInt
 			elevenArray
 			elevenInt
+			jsonfile
+			yamlfile
 );
-
+my			$Scite_Testing = ( -e 't' ) ? 't/' : '' ;
 ### <where> - testing posInt ...
 my  		@posIntArray = qw(
 				1
@@ -64,5 +66,37 @@ ok			is_elevenInt( $_ ),			"Correct -elevenInt- test ( $_ )",
 map{
 ok			!is_elevenInt( $_ ),		"Not an -elevenInt- test ( $_ )",
 } 			@notelevenIntArray;
+
+### <where> - testing jsonfile ...
+my  		@jsonfileArray = qw(
+				test_files/config.json
+			);
+my  		@notjsonfileArray = qw(
+				config.json test_files/configII.json
+			);
+map{									
+ok			is_jsonfile( $Scite_Testing . $_ ),
+									"Correct -jsonfile- test ( $_ )",
+} 			@jsonfileArray;
+map{
+ok			!is_jsonfile( $Scite_Testing . $_ ),
+									"Not a -jsonfile- test ( $_ )",
+} 			@notjsonfileArray;
+
+### <where> - testing yamlfile ...
+my  		@yamlfileArray = qw(
+				test_files/config.yml test_files/configII.yml
+			);
+my  		@notyamlfileArray = qw(
+				config.yml 
+			);
+map{									
+ok			is_yamlfile( $Scite_Testing . $_ ),
+									"Correct -yamlfile- test ( $_ )",
+} 			@yamlfileArray;
+map{
+ok			!is_yamlfile( $Scite_Testing . $_ ),
+									"Not a -yamlfile- test ( $_ )",
+} 			@notyamlfileArray;
 explain									"... Done Testing";
 done_testing;

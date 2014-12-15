@@ -1,5 +1,8 @@
 #!perl
 #######  Test File for Log::Shiras::Report  #######
+BEGIN{
+    #~ $ENV{Smart_Comments} = '### #### #####';
+}
 
 package Attribute::Add;
 use Moose::Role;
@@ -22,11 +25,7 @@ use Capture::Tiny 0.12 qw(
 		capture_stderr
 	);
 use MooseX::ShortCut::BuildInstance 0.003;
-use lib '../lib', 'lib', '../../DateTimeX-Mashup-Shiras/lib';
-use DateTimeX::Mashup::Shiras 0.007;
-BEGIN{
-    #~ $ENV{Smart_Comments} = '### ####'; #####
-}
+use lib '../lib', 'lib';
 use Log::Shiras::Report 0.007;
 my  ( 
 		$new_class,
@@ -37,11 +36,9 @@ my  (
 		$wait,
 		$ScitePrefix,
 	);
-
-#~ my  ( $wait, $test_instance, $newclass, $capturefilename );
 if( -e 't' ){
 	#~ map{ print "$_\n" } <t/*>;
-	explain "prove running";
+	#~ explain "prove running";
 }else{
 	$ScitePrefix = '../';
 	#~ map{ print "$_\n" } <*>;
@@ -157,7 +154,7 @@ is			$test_instance->add_line(
 dies_ok{
 			$test_instance->set_format_string( '%%%{test_value}Ks %{get_date_one}M(m,ymd)s%%' )
 }											"Set a format that includes a bad 'new type' callout '%%%{test_value}Ks %{get_date_one}M(m,ymd)s%%' (should die)";
-like		$@,  qr/\QCoersion to 'acmeformat' failed because of an unrecognized modifier -K- found in format string -{test_value}Ks -\E/sxm, 
+like		$@,  qr/\QCoersion to 'shirasformat' failed because of an unrecognized modifier -K- found in format string -{test_value}Ks -\E/sxm, 
 											"... and check for the correct output";
 ok			$test_instance->set_format_string( "%%%{test_value}Ms %{get_date_one}M( m => 'ymd' )s%%" ),
 											"Set a format that with two new attribute type examples '%%%{test_value}Ms %{get_date_one}M( m => 'ymd' )s%%'";
@@ -277,35 +274,29 @@ is			$test_instance->get_file_line( 0 ), 'A test header with embedded newlines',
 lives_ok{
 			$test_instance->add_line('foo','bar','baz')
 }              								'Test that the add line command works';#68
-#~ $wait = <>;
 is			$test_instance->count_file_lines, 2,
 											'Test that a header and 1 line is loaded to the  file';#69
 is			$test_instance->get_file_line( 1 ), '% - foo - bar - baz - %',
 											'Test that the loaded line is formatted as expected' ;#70
+dies_ok{
+			$test_instance->set_format_string( '%2${test_value}Ps' );
+}											'Pass an alternative location call with a value call together and see if it fails';
+like		$@,  qr/You cannot call for alternative location pull -2\$- and get data from the -P- source in shirasformat type coersion at line \d{3}\./, #
+											"... and check for the correct output";
 is			$test_instance = undef, undef,	'Unlink the active instance';
 is			-f $firstfile, 1,				"Test that -$firstfile- is found";#122
 ok			unlink( $firstfile ),			"Test that -$firstfile- is deleted";#123
 explain										"... Test Done";
 done_testing;
 
-### subroutine called in test #31 and used in #32
 sub super_size_sub{
     ### <where> - Made it to super_size_sub ...
 	### <where> - passed: @_
     return ('Super duper ' . join ' ', @_);
 }
 
-### subroutine called in tests 41 and 42
 sub find_yourself{
     ### Made it to find_yourself
     ### @_
     return (join ' - ', @_) . ' ...Where are you?';
 }
-
-#~ package Explain;
-
-#~ sub call_someone{
-	#~ shift;
-	#~ $test_instance->add_line( @_ );
-#~ }
-1;

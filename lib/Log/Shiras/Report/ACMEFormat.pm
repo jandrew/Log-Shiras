@@ -1,9 +1,8 @@
 package Log::Shiras::Report::ShirasFormat;
-use version; our $VERSION = version->declare("v0.18.2");
 
 use Moose::Role;
-use YAML::Any qw( Dump );
 use Carp qw( confess );
+use version 0.94; our $VERSION = qv('0.007.001');
 if( $ENV{ Smart_Comments } ){
 	use Smart::Comments -ENV;
 	### Smart-Comments turned on for Log-Shiras-Report-ShirasFormat ...
@@ -13,15 +12,17 @@ use MooseX::Types::Moose qw(
 		Bool
     );
 use lib '../../../../lib';##Change for Scite vs non Scite testing
-use Log::Shiras::Types qw(
-        shirasformat
+use Log::Shiras::Types 0.013 qw(
+        acmeformat
     );
+        #~ newtypeformat
+		#~ callerformat
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
 has 'format_string' =>(
         is          => 'ro',
-        isa         => shirasformat,
+        isa         => acmeformat,
 		traits		=> ['Hash'],
         coerce      => 1,
         reader      => '_get_format',
@@ -34,8 +35,45 @@ has 'format_string' =>(
         trigger     => \&_validate_coderef,
     );
 
+#########1 Public Methods     3#########4#########5#########6#########7#########8#########9
 
-#########1 Private Methods    3#########4#########5#########6#########7#########8#########9
+
+
+#########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
+
+has _new_format_precall =>(
+        is          => 'ro',
+        isa         => ArrayRef,
+        reader      => '_get_format_precall',
+        writer      => '_set_format_precall',
+        #~ weak_ref    => 1,#I'm not clear this is useful
+    );
+	
+has _position_shift =>(
+		is		=> 'ro',
+		isa		=> ArrayRef,
+		traits	=> ['Array'],
+		handles	=>{
+			_add_position => 'push',
+			_get_position => 'get',
+		},
+	);
+	
+#~ has _contains_caller =>(
+		#~ is  	=> 'ro',
+		#~ isa		=> Bool,
+		#~ writer	=> '_set_contains_caller',
+		#~ default	=> 0,
+	#~ );
+
+#~ has _report_hook =>(
+	#~ is			=> 'ro',
+	#~ isa			=> 'Log::Shiras::Switchboard',
+	#~ writer		=> '_set_report_hook',
+	#~ weak_ref	=> 1,
+#~ );
+
+##############  Private Methods  ###################################
 
 sub _use_formatter{
     my ( $self, $message_ref ) = @_;
@@ -43,43 +81,11 @@ sub _use_formatter{
     #### <where> - Building output with: $message_ref
     my  $output;
     if ( $self->has_format_string ) {
-		### <where> - format string: $self->_get_format->{message}
-        ##### <where> - Implementing current format: $self->_get_format
-		my $alt_input = $self->_get_item( 'alt_input' );
-		if( @$alt_input ){
-			for my $input_ref ( reverse @$alt_input ){
-				##### <where> - processing: $input_ref
-				my $command	= undef;
-				my $result	= undef;
-				my @command_pairs = ();
-				for my $item ( @{$input_ref->{commands}} ){
-					##### <where> - processing: $item
-					if( $command ){
-						if( $command eq 'm' and @command_pairs ){
-							( $result, $message_ref ) =
-								_get_method_value( 
-									$result, [ @command_pairs ], 
-									$input_ref, $message_ref 
-								);
-							@command_pairs = ();
-						}
-						push @command_pairs, $command, $item;
-						$command = undef;
-					}else{
-						$command = $item;
-					}
-					### <where> - result: $result
-				}
-				( $result, $message_ref ) =
-					_get_method_value( 
-						$result, [ @command_pairs ], 
-						$input_ref, $message_ref 
-					) if @command_pairs;
-				### <where> - message ref: $message_ref
-				##### <where> - input ref: $input_ref
-				splice( @{$message_ref->{message}},$input_ref->{start_at} ,0 ,$result ); 
-			}
-			### <where> - message ref: $message_ref
+		### <where> - format string: $self->_get_format
+        #### <where> - Implementing current format string ...
+		my $input_ref = $self->_get_item( 'list_modifier' );
+		if( $input_ref ){
+			confess "I don't have the method and passed value process set up yet";
 		}
 		$output = sprintf $self->_get_item( 'final' ), @{$message_ref->{message}};
 	}else{
@@ -90,153 +96,147 @@ sub _use_formatter{
     return $output;
 }
 
+#~ sub _new_format_string{
+    #~ my ( $self, $formatref, $precall, $passedref, @array ) = @_;
+    #~ ### <where> - Reached _new_format_string
+    #~ #### <where> - Recieved formatref  : $formatref
+    #~ #### <where> - The precall is      : $precall
+    #~ #### <where> - The passedref is    : $passedref
+    #~ my  $inputcount = 
+            #~ ( $formatref->{'inputcount'} eq '*' ) ?
+                #~ pop @$passedref :
+                #~ $formatref->{'inputcount'} ;
+    #~ my  @inputarray;
+    #~ #### <where> - Check if there are inputs needed
+    #~ if ( $inputcount ) {
+        #~ #### <where> - There are inputs needed - handle if the inbound values are short
+        #~ $inputcount = ( @array < $inputcount ) ? @array : $inputcount;
+        #~ map { push @inputarray, shift @array } ( 1 .. $inputcount );
+        #~ #### <where> - The current input array is: @inputarray
+    #~ }
+    #~ my  $attribute  = $formatref->{'method'};
+    #~ my  $modifier = $formatref->{'modifier'};
+    #~ #### <where> - Using method: $attribute
+    #~ #### <where> - and modifier: $modifier
+    #~ my  $methodresult;
+    #~ if( $precall eq 'self' ) {
+        #~ #### <where> - found a method of the appender
+        #~ $methodresult = 
+            #~ ( $modifier ) ?
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ $self->$attribute->$modifier->( @inputarray ) :
+                        #~ $self->$attribute->$modifier( @inputarray )     ) :
+                    #~ $self->$attribute->$modifier                            ) :
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ $self->$attribute->( @inputarray ) :
+                        #~ $self->$attribute( @inputarray )    ) :
+                    #~ $self->$attribute                                       ) ;
+    #~ } elsif ( $precall eq 'main' ) {
+        #~ #### <where> - Found a subroutine called from main
+        #~ #### <where> - Calling sub method: $attribute
+        #~ my $call = $precall . '::' . $attribute;
+        #~ ### TODO testing for risk when turning off strict "refs" done in the SubTypes
+        #~ no  strict "refs";# I don't know how to call a subroutine that is not a CodeRef
+        #~ $methodresult = 
+            #~ ( $modifier ) ?
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ &$call->$modifier->( @inputarray ) :
+                        #~ &$call->$modifier( @inputarray )     ) :
+                    #~ &$call->$modifier                            ) :
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ &$call->( @inputarray ) :
+                        #~ &$call( @inputarray )    ) :
+                    #~ &$call                                        ) ;
+        #~ use strict "refs";
+    #~ } else {
+        #~ ### <where> - Calling the method on: $precall
+        #~ $methodresult = 
+            #~ ( $modifier ) ?
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ $precall->$attribute->$modifier->( @inputarray ) :
+                        #~ $precall->$attribute->$modifier( @inputarray )     ) :
+                    #~ $precall->$attribute->$modifier                            ) :
+                #~ ( ( scalar @inputarray ) ?
+                    #~ ( ( $formatref->{'inputtype'} eq 'i' ) ?
+                        #~ $precall->$attribute->( @inputarray ) :
+                        #~ $precall->$attribute( @inputarray )    ) :
+                    #~ $precall->$attribute                                       ) ;
+    #~ }
+    #~ $methodresult //= '';
+    #~ ### <where> - Loading method/sub result: $methodresult
+    #~ push @$passedref, $methodresult;
+    #~ return( $passedref, @array );
+#~ }
+
 sub _validate_coderef{
     my ( $self, @other ) = @_;
     ### <where> - Reached _validate_coderef
     #### <where> - passed: @other
     #### <where> - Checking if there are any method or subroutine calls that should be validated
-    my  $format_ref = $self->_get_format;
-    #### <where> - The current format definition is:$format_ref
+    #### <where> - checking attribute: $self->_get_format
+    my  $arrayref = $self->_get_format;
+    #### <where> - The current arrayref is:$arrayref
     my  $callsequence = [];
-    for my $segment( @{$format_ref->{alt_input}} ) {
+    for my $segment( @$arrayref ) {
         #### <where> - Validating the segment: $segment
-        if( $segment->{commands}->[0] eq 'M' ) {
+        if( $segment->{formatchar} and $segment->{formatchar} eq 'M' ) {
             #### <where> - This is a new style format
             #### <where> - Reached method validation for: $segment->{'method'}
-			my  $command = $segment->{commands}->[1];
-            if( main->can( $command ) ) {
-                #### <where> - Confirmed this is a subroutine call from the main script
-                if( exists $segment->{commands}->[2] and $segment->{commands}->[2] eq 'i' ) {
-                    confess "'$command' is a subroutine of main and can only accept 'lvalue' inputs (should be 'l' passed 'i')";
-                }
-				$segment->{commands}->[0] = 'm';
-				next;
-				#~ unshift @{$segment->{commands}}, 'C', 'main';
-            }elsif( $self->can( $command ) ) {
+            if( $self->can( $segment->{'method'} ) ) {
                 #### <where> - Confirmed this is a method call on the instance
-				unshift @{$segment->{commands}}, 'C', $self;
+                push @$callsequence, 'self';
+                next;
             }
-			if( $segment->{commands}->[0] ne 'C' ){
-				my  $meta = $self->meta;
-				my  @superclasses = $meta->superclasses;
-				#### <where> - The current superclasses: @superclasses
-				for my $class ( @superclasses ) {
-					if ( $class->can( $command ) ) {
-						#### <where> - Confirmed this is a method call on the consumer instance: $class
-						unshift @{$segment->{commands}}, 'C', $class;
-						last;
-					}
-				}
-			}
-			if( $segment->{commands}->[0] ne 'C' ){
-				#### <where> - TODO get the moose equivalent of %INC
-				#### <where> - Now checking INC: %INC
-				for my $class ( keys %INC ) {
-					#### <where> - Strip the module extention for: $class
-					$class =~ s/\.pm$//;
-					if ( $class->can( $command ) ) {
-						#### <where> - Confirmed this is a method call on the consumer instance: $class
-						unshift @{$segment->{commands}}, 'C', $class;
-						last;
-					}
-				}
-			}
-            #### <where> - TODO other method of attribute finding ...
-			if( $segment->{commands}->[0] ne 'C' ){
-				confess "This appender cannot use -$command-";
-			}else{
-				$segment->{commands}->[2] = 'm';
-				##### <where> - updated format_ref: $format_ref
-			}
+            if( main->can( $segment->{'method'} ) ) {
+                #### <where> - Confirmed this is a subroutine call from the main script
+                if( $segment->{'inputtype'} eq 'i' ) {
+                    die "'$segment->{'method'}' is a subroutine of main and can only accept 'lvalue' inputs (should be 'l' passed 'i')";
+                }
+                push @$callsequence, 'main';
+                next;
+            }
+            my  $meta = $self->meta;
+            my  @superclasses = $meta->superclasses;
+            #### <where> - The current superclasses: @superclasses
+            for my $class ( @superclasses ) {
+                if ( $class->can( $segment->{'method'} ) ) {
+                    #### <where> - Confirmed this is a method call on the consumer instance: $class
+                    push @$callsequence, $class;
+                    next;
+                }
+            }
+            #### <where> - TODO get the moose equivalent of %INC
+            #### <where> - Now checking INC: %INC
+            for my $class ( keys %INC ) {
+                #### <where> - Strip the module extention for: $class
+                $class =~ s/\.pm$//;
+                if ( $class->can( $segment->{'method'} ) ) {
+                    #### <where> - Confirmed this is a method call on the consumer instance: $class
+                    push @$callsequence, $class;
+                    next;
+                }
+            }
+            #### <where> - TODO other method of attribute finding
+            confess "This appender cannot use -$segment->{'method'}-";
         }else {
            #### <where> - This segment is not a method call formatted segment
         }
     }
+    $self->_set_format_precall( $callsequence );
+    #### <where> - The call sequence is: $callsequence
+    #### <where> - Check it was loaded: $self->_get_format_precall
     return 1;
 }
 
-sub _get_method_value{
-	my ( $result, $command_ref, $input_ref, $message_ref ) = @_;
-	### <where> - passed: @_
-	if( $command_ref->[0] eq 'P' ){
-		shift( @$command_ref );
-		$result = $message_ref->{shift( @$command_ref )};
-	}elsif( $command_ref->[0] eq 'C' ){
-		shift( @$command_ref );
-		$result = shift( @$command_ref );
-	}
-	### <where> - current result: $result
-	### <where> - command ref: $command_ref
-	if( @$command_ref ){
-		my $input = ( $command_ref->[0] =~ /[il]/ ) ?
-						$command_ref->[1] :
-					( exists $command_ref->[2] and
-						$command_ref->[2] =~ /[il]/ ) ?
-						$command_ref->[3] : undef ;
-		### <where> - current input: $input
-		#### <where> - message ref: $message_ref->{message}
-		if( $input and $input =~ /^(\d+)$/ ){
-			my $count = $1;
-			### <where> - attempting to remove items from the message ref for method input at a count of: $count
-			### <where> - starting at point: $input_ref->{start_at}
-			my ( @actual_items ) = splice( @{$message_ref->{message}}, $input_ref->{start_at}, $count );
-			$input = \@actual_items;
-		}elsif( $input and $input =~ /^\*$/ ){
-			my $count = splice( @{$message_ref->{message}}, $input_ref->{start_at}, 1, );
-			#### <where> - message ref: $message_ref->{message}
-			### <where> - attempting to remove items from the message ref for method input at a count of: $count
-			### <where> - starting at point: $input_ref->{start_at}
-			my ( @actual_items ) = splice( @{$message_ref->{message}}, $input_ref->{start_at}, $count );
-			$input = \@actual_items;
-		}elsif( $input ){
-			$input = [ split /,\s*/, $input ];
-		}else{
-			$input = [];
-		}
-		my	$string = $command_ref->[1];
-		#### <where> - result: $result
-		#### <where> - message ref: $message_ref->{message}
-		### <where> - current string: $string
-		### <where> - input: $input
-		if( $result ){
-			if( $command_ref->[0] eq 'm' and !exists $command_ref->[2] ){
-				### <where> - processing the result->method only case ...
-				$result = $result->$string;
-			}elsif( $command_ref->[0] eq 'm' and exists $command_ref->[2] and $command_ref->[2] eq 'i' ){
-				### <where> - processing the result->method->( input ) case ...
-				$result = $result->$string->( @$input );
-			}elsif( $command_ref->[0] eq 'm' and exists $command_ref->[2] and $command_ref->[2] eq 'l' ){
-				### <where> - processing the result->method( input ) case ...
-				$result = $result->$string( @$input );
-			}elsif( $command_ref->[0] eq 'i' ){
-				### <where> - processing the method->( input ) case ...
-				$result = $result->( @$input );
-			}elsif( $command_ref->[0] eq 'l' ){
-				### <where> - processing the method( input ) case ...
-				$result = &{$result}( @$input );
-			}else{
-				confess "Can't work out what to do with: " . Dump( $command_ref );
-			}
-		}elsif( $command_ref->[0] ne 'm' ){
-			confess "No method was passed for action in: " . Dump( $command_ref );
-		}else{
-			if( exists $command_ref->[2] and $command_ref->[2] eq 'i' ){
-				### <where> - processing the method->( input ) case ...
-				$result = $string->( @$input );
-			}elsif( exists $command_ref->[2] and $command_ref->[2] eq 'l' ){
-				### <where> - processing the method( input ) case ...
-				no strict 'refs';
-				$result = &{"main::$string"}( @$input );
-			}else{
-				### <where> - processing the method only case ...
-				no strict 'refs';
-				$result = &{"main::$string"};
-			}
-		}
-	}
-	### <where> - new result: $result
-	return( $result, $message_ref );
-}
+#~ after _set_switchboard_hook => sub{
+	#~ my ( $self, $value ) = @_;
+	#~ $self->_set_report_hook( $value );
+#~ };
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 

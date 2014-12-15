@@ -1,8 +1,6 @@
 package Test::Log::Shiras;
+use version; our $VERSION = version->declare("v0.018.002");
 
-if( $ENV{Smart_Comments} ){
-	use Smart::Comments -ENV;
-}
 use	Moose;
 use MooseX::StrictConstructor;
 use MooseX::NonMoose;
@@ -12,12 +10,11 @@ use MooseX::Types::Moose qw(
 		Bool
 		ArrayRef
     );
-use version 0.94; our $VERSION = qv('0.009_001');
 use lib 	
 		'../../../lib',
 		'../lib';
-use Log::Shiras::Switchboard 0.013;
-use Log::Shiras::Types 0.013 qw(
+use Log::Shiras::Switchboard 0.018;
+use Log::Shiras::Types qw(
 		posInt
 	);
 
@@ -274,7 +271,7 @@ __END__
 
 =head1 NAME
 
-Test::Log::Shiras - Used to test data logged by Log::Shiras
+Test::Log::Shiras - Used to test traffic handled by Log::Shiras
 
 =head1 SYNOPSIS
     

@@ -1,5 +1,5 @@
-package Log::Shiras::Telephone;
-use version; our $VERSION = qv("v0.21_3");
+package Log::Shiras::TelephoneII;
+use version; our $VERSION = version->declare("0.019.001");
 use 5.010;# defined or
 use Moose;
 use MooseX::StrictConstructor;
@@ -7,17 +7,16 @@ use MooseX::Types::Moose qw(
 		Bool
 		ArrayRef
     );
-#~ Moose::Exporter->setup_import_methods(
-    #~ as_is => [ 'debug_line' ],#
-#~ );
+Moose::Exporter->setup_import_methods(
+    as_is => [ 'debug_line' ],#
+);
+use Data::Dumper;
 use lib '../../../lib',;
 use Log::Shiras::Types qw(
 		namespace
 	);
-BEGIN{
-	use Log::Shiras::Switchboard;
-}
-my	$switchboard= Log::Shiras::Switchboard->instance;
+use Log::Shiras::Switchboard;
+my	$switchboard = Log::Shiras::Switchboard->instance;
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
@@ -63,7 +62,6 @@ sub talk{
 			{ message => [ @passed ] };
 	$data_ref->{message} //= '';
 	my	$go_back = 0;
-	return undef if !$switchboard;
 	$switchboard->_internal_talk( { report => 'log_file', level => 0,######### Logging
 		name_space => 'Log::Shiras::Telephone::talk',
 		message => [ 'Arrived at Log::Shiras::Telephone::talk to say:', $data_ref->{message} ], } );
@@ -118,23 +116,25 @@ sub talk{
 			print STDOUT join( "\n\t", @$ref ) . "\n";
 		}else{
 			### <where> - sending warning for unprinted message ...
-			my $message = "Failover is off and no reporting occured";
-			if( $ref->[0] ){
-				$ref->[0] = '-->' . $ref->[0];
-				$ref->[-1] .= '<--';
-				$message .= ' for:';
-				$message = [ $message, $ref ];
-			}
+		$ref->[0] = '-->' . $ref->[0];
+		$ref->[-1] .= '<--';
 			$switchboard->_internal_talk( {
 				report => 'log_file', level	=> 3,
 				name_space 	=> 'Log::Shiras::Telephone::talk',
-				message	=>	$message,	} );
+				message	=>	["Failover is off and no reporting occured for:", @$ref, ],	} );
 		}
 	}
 	$switchboard->_internal_talk( { report => 'log_file', level => 0,######### Logging
 		name_space => 'Log::Shiras::Telephone::talk', message => "The return value is: $x", } );
 	return $x;
 }
+
+sub debug_line(&) {
+	return if !$ENV{Log_Shiras_Debugger};
+	shift->();
+}
+
+#~ sub print_data{ shift; $switchboard->print_data( print_ref =>[ @_ ] ) };
 
 #########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
 
@@ -153,7 +153,7 @@ __PACKAGE__->meta->make_immutable(
 	
 1;
 
-#########1 Documentation      3#########4#########5#########6#########7#########8#########9
+#########1 Phinish            3#########4#########5#########6#########7#########8#########9
 __END__
 
 =head1 NAME

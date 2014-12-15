@@ -1,4 +1,4 @@
-package Log::Shiras::Report::TieFile;
+package Log::Shiras::Report::XLSXFile;
 use version; our $VERSION = version->declare("0.019_001");
 
 use Moose::Role;
@@ -175,7 +175,6 @@ sub disconnect_file{
 		### <where> - filetie_array: $tied_ref
 		untie @$tied_ref;
     }
-	untie $self->_get_filetie_ref;
 	$self->_clear_filetie;
 	$self->_clear_filename;
 }

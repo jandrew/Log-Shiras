@@ -694,6 +694,7 @@ sub _really_report{
 	my 	$report_array_ref = $self->get_report( $report_ref->{report} );
 	if( $report_array_ref ){
 		for my $report ( @{$report_array_ref} ){
+			next if !$report;
 			$self->_internal_talk( { report => 'log_file', level => 1,###### Logging
 				name_space => 'Log::Shiras::Switchboard::_really_report',
 				message => [ 'sending message to -:' .  $report_ref->{report}, 

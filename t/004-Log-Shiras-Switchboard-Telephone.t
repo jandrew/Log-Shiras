@@ -1,32 +1,23 @@
 #!perl
-#######  Initial Test File for Log::Shiras::Switchboard  #######
-BEGIN{
-	#~ $ENV{ Smart_Comments } = '### ####'; #####
-}
-if( $ENV{ Smart_Comments } ){
-	use Smart::Comments -ENV;
-}
+#######  Initial Test File for Log::Shiras::Switchboard/Telephone #######
 
 use Test::Most;
 use Test::Moose;
 use Capture::Tiny 0.12 qw(
-	capture_stderr
 	capture_stdout
+	capture_stderr
 );
 use YAML::Any;
 $| = 1;
 use lib
-		'../lib', 'lib', 
-		'../../Data-Walk-Extracted/lib',
-		'../Data-Walk-Extracted/lib';# 
-use Log::Shiras::Switchboard v0.013;
-
+		'../lib', 'lib', '../../Data-Walk-Extracted/lib';# 
+use Log::Shiras::Switchboard 0.018;
+use Log::Shiras::Telephone 0.018;
 sub caller_test{
-	get_telephone;
+	Log::Shiras::Telephone->new;
 }
 
 my(
-			$wait, 
 			$ella_peterson, 
 			$mary_printz, 
 			$name_space_ref,
@@ -41,28 +32,25 @@ my(
 			$second_call,
 			$printed_data,
 			$main_phone,
-);# $deputyandy, $firstinst, $testinst, $secondinst, $newclass, $newmeta, $capturefilename
-
-my  		@exported_methods = qw(
-				get_operator
-				get_telephone
-			);
-
+);
 
 my  		@attributes = qw(
 				name_space_bounds
 				reports
 				logging_levels
-				will_cluck
-				ignored_callers
+				self_report
 				buffering
 			);
 
 my  		@switchboard_methods = qw(
+				get_operator
+				get_caller
+				get_all_skip_up_callers
+				set_all_skip_up_callers
+				add_skip_up_caller
+				clear_all_skip_up_callers
 				get_name_space
-				has_no_name_space
 				get_reports
-				has_no_reports
 				get_report
 				remove_reports
 				has_log_level
@@ -71,42 +59,30 @@ my  		@switchboard_methods = qw(
 				remove_log_levels
 				set_all_log_levels
 				get_all_log_levels
-				will_cluck
-				set_will_cluck
-				ignored_callers
-				set_ignored_callers
-				add_ignored_callers
+				self_report
+				set_self_report
 				get_all_buffering
-				has_no_buffering
-				has_buffering
+				has_defined_buffering
 				set_buffering
 				get_buffering
 				remove_buffering
 				add_name_space_bounds
 				add_reports
-				remove_name_space
-				set_stdout_level
-				set_warn_level
-				clear_stdout_level
-				clear_warn_level
-				clear_buffer
+				remove_name_space_bounds
 				send_buffer_to_output
 			);
 
 my  		@telephone_methods = qw(
+				new
 				talk
 			);
 
 ### Log-Shiras easy questions
-map{
-can_ok		'main', $_,
-}			@exported_methods;
 ok			$name_space_ref = {
 				main =>{
 					UNBLOCK =>{
 						report1	=> 'ELEVEN',
 						run		=> 'warn',
-						STDOUT	=> 'warn',
 						WARN	=> 'debug',
 					},
 					caller_test =>{
@@ -120,7 +96,7 @@ ok			$name_space_ref = {
 					Print =>{
 						add_line =>{
 							UNBLOCK =>{
-								STDOUT => 'eleven',
+								log_file => 'eleven',
 							},
 						},
 					},
@@ -135,9 +111,10 @@ ok 			$report_ref = {
 				run		=>[ $report_placeholder_1 ],
 			},							"Build initial reports for testing";
 lives_ok{
-			$ella_peterson = get_operator(
+			$ella_peterson = Log::Shiras::Switchboard->get_operator(
 				name_space_bounds => $name_space_ref,
 				reports	=> 	$report_ref,
+				self_report => 1,
 			);
 }										"Get a switchboard operator (using setup)";
 ### <where> - Ella Peterson: $ella_peterson
@@ -148,19 +125,16 @@ has_attribute_ok
 map{									#Check that the new instance can use all methods
 can_ok		$ella_peterson, $_,
 }			@switchboard_methods;
-map{									#Check that all exported methods are available
-can_ok		'main', $_,
-}			@exported_methods;
 
 ### Log-Shiras-Switchboard harder questions
 is_deeply	$ella_peterson->get_name_space, $name_space_ref,			
 										"Check that the sources were loaded to this instance";
 is_deeply	$ella_peterson->get_reports, $report_ref,			
 										"Check that the reports were loaded to this instance";
-lives_ok{ 	$mary_printz = get_operator }
+lives_ok{ 	$mary_printz = Log::Shiras::Switchboard->get_operator }
 										"Start a concurrent instance of Log::Shiras with no input";
-is			$mary_printz->set_will_cluck( 1 ), 1,
-										"Turn on clucking for the singleton to see what happens";
+is			$mary_printz->set_self_report( 1 ), 1,
+										"Turn on self reporting for the singleton to see what happens";
 #~ ### <where> - Mary Printz: $mary_printz
 is_deeply	$mary_printz->get_name_space, $name_space_ref,			
 										"Check that the sources are available to the copy of the instance";
@@ -196,7 +170,7 @@ is_deeply 	$ella_peterson->get_reports(), $add_ref_report,
 										"Check that the new report element is available (along with the old one) in the other instance";
 ok  		delete $name_space_ref->{second_life},	
 										"Update the master source variable (by removing a section) for testing";
-lives_ok{	$ella_peterson->remove_name_space( {	second_life =>{} }  ) }
+lives_ok{	$ella_peterson->remove_name_space_bounds( {	second_life =>{} }  ) }
 										"Try to remove the second instance source through the first instance";
 is_deeply 	$mary_printz->get_name_space, $name_space_ref,
 										"Check that the second instance source was affected";
@@ -207,17 +181,41 @@ is_deeply 	$mary_printz->get_reports, $report_ref,
 																	"Check that the second instance sources were not affected in the global variable";
 ok			!($mary_printz = undef),	"Clear the Mary Printz handle on the singleton to test re-setup";
 lives_ok{
-			$mary_printz = get_operator(
+			$mary_printz = Log::Shiras::Switchboard->get_operator(
 				name_space_bounds =>{ 
 					test_sub =>{ 
 						UNBLOCK =>{
 							run => 'debug',
 						},
 					},
+					#~ Log =>{
+						#~ UNBLOCK =>{
+							#~ log_file => 'warn',
+						#~ },
+					#~ },
+					#~ Log =>{
+						#~ Shiras =>{
+							#~ Switchboard =>{
+								#~ _attempt_to_report =>{
+									#~ UNBLOCK =>{
+										#~ log_file => 'trace',
+									#~ },
+								#~ },
+							#~ },
+							#~ Telephone =>{
+								#~ talk =>{
+									#~ UNBLOCK =>{
+										#~ log_file => 'trace',
+									#~ },
+								#~ },
+							#~ },
+						#~ },
+					#~ },
 				},
 				reports	=> 	{
 					report1 => [$report_placeholder_1],
 					run	=> [ $report_placeholder_2 ],
+					log_file => [ Print::Log->new, ],
 				},
 			);
 }										"Set Mary Printz back up with some data to ensure that it works";
@@ -230,78 +228,11 @@ is_deeply	$ella_peterson->get_log_levels( 'report1' ), [ 'special', 'all' ],
 										"... and test that the data loaded correctly";
 lives_ok{
 			$mary_printz->remove_log_levels( 'report1' );
-}										"Test removing the same level";
-is_deeply	$ella_peterson->get_log_levels( 'report1' ), undef,
-										"... and test that the data loaded correctly";
-lives_ok{
-			$mary_printz->add_reports( STDOUT => [ $report_placeholder_1 ], );
-}										"Add an STDOUT report";
-ok			$error_message = capture_stderr { $ella_peterson->set_stdout_level( 'debug' ) },
-										"Set STDOUT output to the debug level for namespace testing";
-like		$error_message, qr/You are currently attempting to Hijack some STDOUT output.  BEWARE,/,
-										"... and check that the correct warning was displayed";
-is			$ella_peterson->set_will_cluck( 0 ), 0,
-										"Turn clucking back off for future processing";
-lives_ok{
-			$print_message = capture_stdout{ $report_placeholder_1->add_line( { message => "Hello World 1" } ) };
-}										"Send a print statement that should be processed as inside the name space and level";
-like		$print_message, qr/^--\|Hello World 1\|--$/,		
-										"... and check that the output includes the expected reporting add ons";
-lives_ok{
-			$print_message = capture_stdout{ print "Hello World 2\n" };
-}										"Send a print statement that should NOT be processed as inside the name space and level";
-like		$print_message,  qr/^Hello World 2$/,		
-										"... and check that the output does NOT includes the expected reporting add ons";
-			my $expected = ( $ENV{ Smart_Comments } ) ? qr/re-pointing standard output to the new coderef \.\.\./ : qr/^$/ ; 
-like		capture_stderr { $mary_printz->set_stdout_level( 'warn' ) }, $expected,
-										"Change STDOUT output to report at the 'warn' level (with no warnings)";
-lives_ok{
-			$print_message = capture_stdout{ print "Hello World 2\n" };
-}										"Now send the same print statement that didn't get processed before";
-like		$print_message,  qr/^--\|Hello World 2\|--$/,		
-										"... and check that the output now includes the expected reporting add-ons since the level is now inside the namespace";
-ok			$ella_peterson->clear_stdout_level,
-										"Clear the STDOUT level definition so the Switchboard operator will quit testing it";
-lives_ok{
-			$mary_printz->add_reports( WARN => [ $report_placeholder_2 ], );
-}										"Add a WARN report";
-lives_ok{
-			$ella_peterson->set_warn_level( 'debug' );
-}										"Set __WARN__ trap at the 'debug' level for namespace testing.";
-lives_ok{
-			$error_message = capture_stderr{ warn "Watch Out World!" };
-}										"Send a warning that is in the namespace and is at an approved level";
-like		$error_message,  qr/\|\|Watch Out World! at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}.\|\| at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}/,		
-										"... and check that the output now includes the expected reporting add-ons since the level is inside the namespace";
-lives_ok{
-			$error_message = capture_stdout{ 
-				Check::Cluck->add_line( {message => "Watch Out World!"} );
-			};
-}										"Send a warning that is OUT of the namespace";
-like		$error_message,  qr/\|\|Watch Out World!\|\| at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}.\n.*Check::Cluck::add_line\(\)/,		
-										"... and check that the output is different since the 'warn' capture was triggered in a different place";
-lives_ok{
-			$ella_peterson->add_name_space_bounds( { Check =>{ Cluck =>{ add_line =>{ UNBLOCK =>{ WARN => 'debug', } } } } } );
-}										"Change the WARN report level for the Check::Cluck module";
-lives_ok{
-			$error_message = capture_stderr{ 
-				Check::Cluck->add_line( {message => "Watch Out World!"} );
-			};
-}										"Send a warning that is IN the namespace";
-like		$error_message,  qr/\|\|\|\|Watch Out World!\|\| at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}/,		
-										"... and check that the test didn't go into deep recursion";
-lives_ok{
-			$ella_peterson->set_warn_level( 'trace' );
-}										"Change __WARN__ trap rerouting to the 'eleven' level (loudest) for namespace testing.";
-lives_ok{
-			$error_message = capture_stdout{ warn "Watch Out World!" };
-}										"Send a warning that is in the namespace but is at too low a level";
-like		$error_message,  qr/^\s*Watch Out World! at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}/,		
-										"... and check that the warning was sent to stdout as planned";
-lives_ok{
-			$ella_peterson->clear_warn_level;
-}										"Clear warn capture for reporting";
-ok 			$main_phone = get_telephone(),
+}										"Test removing the same custom levels";
+is_deeply	$ella_peterson->get_log_levels( 'report1' ),
+			[ 'trace', 'debug', 'info', 'warn', 'error', 'fatal', undef, undef, undef, undef, undef, 'eleven', ],
+										"... and test that the levels are back to the default";
+ok 			$main_phone = Log::Shiras::Telephone->new(),
 										"Test getting a telephone";
 map{									#Check that all exported methods are available
 can_ok		$main_phone, $_,
@@ -324,21 +255,15 @@ dies_ok{
 			$main_phone->talk( report => 'run', level => 'fatal',  );
 }										"Test calling fatal when it is in the namespace to ensure it dies";
 			};
-like		$@, qr/fatal phone call successfully placed at /,
+like		$@, qr/Fatal call sent to the switchboard /,
 										"... and check the obituary";
-like		$error_message, qr/\|\|Fail with no descriptive message provided\|\| at (t\\)?004-Log-Shiras-Switchboard.t line \d{3}/,
-										"... then check the error out";
-ok 			$main_phone = get_telephone( 'main::report1' ),
-										"Test getting a telephone that falls inside and UNBLOCKed name space";
-is 			$main_phone->{works}, 1,	"And check that it is turned on";
-is			$main_phone->talk( report => 'report 1', level => 'fatal', dont_report => 1, ), 0,
+ok 			$main_phone = Log::Shiras::Telephone->new( name_space => 'main::report1' ),
+										"Test getting a telephone that falls inside an UNBLOCKed name space";
+is 			$main_phone->talk( report => 'report 1', level => 'fatal', ), 0,
 										"Test calling fatal when it is OUT of the namespace to ensure it lives";
-ok 			$main_phone = get_telephone( 'Not::In::Bounds' ),
-										"Test getting a telephone that is out of bounds";
-is 			$main_phone->{works}, 0,	"And check that it is turned off";
-ok			$mary_printz->set_buffering( report1 => 1, ),
+ok 			$mary_printz->set_buffering( report1 => 1, ),
 										"Turn on buffering for 'report1'";
-ok 			$main_phone = get_telephone(),
+ok 			$main_phone = Log::Shiras::Telephone->new(),
 										"Test getting another telephone";
 			$print_message = capture_stdout{
 lives_ok{
@@ -401,6 +326,20 @@ sub add_line{
 	my @input = ( ref $ref->{message} eq 'ARRAY' ) ? @{$ref->{message}} : ($ref->{message} );
 	chomp @input;
 	print STDOUT "--|" . join( ' ', @input ) . "|--\n";
+}
+
+package Print::Log;
+sub new{
+	bless {}, shift;
+}
+sub add_line{
+	shift;
+	my @input = ( ref $_[0]->{message} eq 'ARRAY' ) ? @{$_[0]->{message}} : $_[0]->{message};
+	#### <where> - input: @input
+	my @new_list;
+	map{ push @new_list, $_ if $_ } @input;
+	chomp @new_list;
+	printf( "subroutine - %-28s | line - %04d |\n\t:(\t%-31s ):\n", $_[0]->{subroutine}, $_[0]->{line}, join( "\n\t\t", @new_list ) );
 }
 
 1;
