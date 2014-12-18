@@ -79,7 +79,7 @@ sub import {
         Filter::Util::Call::filter_add(
             sub {
                 my($status);
-                s/###LogSD\s+// if
+                s/^(\s*)###LogSD\s/$1         /mg if
                     ($status = Filter::Util::Call::filter_read()) > 0;
                 $status;
                 }

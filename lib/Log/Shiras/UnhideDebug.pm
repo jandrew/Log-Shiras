@@ -32,7 +32,7 @@ sub resurrector_fh {
     my($tmp_fh, $tmpfile) = tempfile( UNLINK => 1 );
     print "Opened tmpfile $tmpfile\n" if INTERNAL_DEBUG;
 
-    $text =~ s/###LogSD\s+//mg;
+    $text =~ s/^(\s*)###LogSD\s/$1         /mg;
 
     print "Text=[$text]\n" if INTERNAL_DEBUG;
 
