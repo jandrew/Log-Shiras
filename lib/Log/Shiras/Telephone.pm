@@ -64,6 +64,8 @@ sub talk{
 	$data_ref->{message} //= '';
 	my	$go_back = 0;
 	return undef if !$switchboard;
+	return undef if $switchboard->has_recursion_block;
+	$switchboard->set_recursion_block( 1 );
 	$switchboard->_internal_talk( { report => 'log_file', level => 0,######### Logging
 		name_space => 'Log::Shiras::Telephone::talk',
 		message => [ 'Arrived at Log::Shiras::Telephone::talk to say:', $data_ref->{message} ], } );
@@ -133,6 +135,7 @@ sub talk{
 	}
 	$switchboard->_internal_talk( { report => 'log_file', level => 0,######### Logging
 		name_space => 'Log::Shiras::Telephone::talk', message => "The return value is: $x", } );
+	$switchboard->set_recursion_block( 0 );
 	return $x;
 }
 
@@ -712,6 +715,10 @@ B<1.> Add self_report messages to the test file
 B<2.> Add method to pull a caller($x) stack that can be triggered in the namespace 
 boundaries.  Possibly this would be blocked on or off by talk() command (so only the 
 first talk of the method would get it).
+
+B<3.> Explain recursion flag in the POD
+
+B<4.> hide internal reporting with source filters like UnhideDebug and then add a recursion flag
 
 =back
 

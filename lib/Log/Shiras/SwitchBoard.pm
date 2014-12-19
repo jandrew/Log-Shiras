@@ -547,6 +547,14 @@ has '_can_communicate_cash' =>(
 	clearer	=> '_clear_can_communicate_cash',
 );
 
+has '_recursion_block' =>(
+		is		=> 'ro',
+		isa		=> Bool,
+		default	=> 0,
+		reader	=> 'has_recursion_block',
+		writer	=> 'set_recursion_block',
+	);
+
 #~ has _debug_filter =>(
 		#~ isa 		=> Bool,
 		#~ writer		=> '_set_debug_filter',
