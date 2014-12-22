@@ -39,7 +39,6 @@ my %WriteMakefileArgs = (
     "Moose::Role" => 0,
     "MooseX::HasDefaults::RO" => 0,
     "MooseX::NonMoose" => 0,
-    "MooseX::ShortCut::BuildInstance" => "1.028",
     "MooseX::Singleton" => 0,
     "MooseX::StrictConstructor" => 0,
     "MooseX::Types" => 0,
@@ -99,7 +98,7 @@ my %WriteMakefileArgs = (
     "version" => "0.94",
     "warnings" => 0
   },
-  "VERSION" => "v0.21_1",
+  "VERSION" => "v0.23_1",
   "test" => {
     "TESTS" => "t/*.t t/Log/Shiras/*.t"
   }

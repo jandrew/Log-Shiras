@@ -33,7 +33,7 @@ use MooseX::Types::Moose qw(
 		Str
 		Object
     );
-use MooseX::ShortCut::BuildInstance;
+#~ require MooseX::ShortCut::BuildInstance;
 use lib '../../../lib', '../../lib';
 #~ with 'Log::Shiras::Caller';
 #~ use Log::Shiras::Switchboard;
@@ -335,11 +335,11 @@ subtype reportobject, as Object,
 	where{ $_->can( 'add_line' ) },
 	message{ $_ };
 	
-coerce reportobject, from filehash,
-	via{ 
-		### <where> - the passed value is: $_
-		return build_instance( %$_ );
-	};
+#~ coerce reportobject, from filehash,
+	#~ via{ 
+		#~ ### <where> - the passed value is: $_
+		#~ return MooseX::ShortCut::BuildInstance::build_instance( %$_ );
+	#~ };
 	
 subtype namespace, as Str,
 	where{

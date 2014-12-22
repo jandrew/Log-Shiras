@@ -7,14 +7,29 @@ use warnings;
 
 use File::Temp qw(tempfile);
 use File::Spec;
+use Carp qw( cluck );
 
 use constant INTERNAL_DEBUG => 0;
+my	$my_unhide_skip_check =
+		qr/(
+			^MooseX.ShortCut|	^Archive.Zip|		^File|
+			^UNIVERSAL|			^IO.File|			^Compress.Raw|
+			^FileHandle|		^File.Copy|			^Time.Local|
+			^XML.LibXML|		^Encode|			^XML.SAX|
+			^Log|				^Type|				^DateTime(?!X)|
+			^Class.Factory|		^Module.Pluggable	^Devel|
+			^Clone				^Moose(?!X)
+		)/x;
 
 ###########################################
 sub import {
 ###########################################
 	print "Loading Log::Shiras::UnhideDebug\n" if INTERNAL_DEBUG;
-    resurrector_init();
+	
+    if( defined $ENV{log_shiras_filter_on} ) {
+		cluck "\$ENV{log_shiras_filter_on} is active - Log::Shiras::UnhideDebug should kick in" if INTERNAL_DEBUG;
+		resurrector_init();
+	}
 }
 
 ##################################################
@@ -34,7 +49,8 @@ sub resurrector_fh {
 
     $text =~ s/^(\s*)###LogSD\s/$1         /mg;
 
-    print "Text=[$text]\n" if INTERNAL_DEBUG;
+    #~ print "Text=[$text]\n" if INTERNAL_DEBUG;
+	print "--------->Module Scrub complete\n" if INTERNAL_DEBUG;
 
     print $tmp_fh $text;
     seek $tmp_fh, 0, 0;
@@ -47,13 +63,15 @@ sub resurrector_loader {
 ###########################################
     my ($code, $module) = @_;
 
-    print "debug unhider called with $module\n" if INTERNAL_DEBUG;
+    print "resurrector_loader (debug unhider) called with $module\n" if INTERNAL_DEBUG;
 
       # Skip Log4perl appenders
-    if($module =~ m#^Log/Log4perl/Appender#) {
-        print "Ignoring $module (Log4perl-internal)\n" if INTERNAL_DEBUG;
+    if($module =~ $my_unhide_skip_check) {
+		cluck "Don't scrub $module (it's on the skip list)\n" if INTERNAL_DEBUG;
         return undef;
-    }
+    }else{
+		print "Module: $module\nDoesn't match: $my_unhide_skip_check\n" if INTERNAL_DEBUG;;
+	}
 
     my $path = $module;
 	print "Testing module: $module\n" if INTERNAL_DEBUG;

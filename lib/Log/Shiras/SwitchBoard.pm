@@ -1,12 +1,12 @@
 package Log::Shiras::Switchboard;
-use version; our $VERSION = version->declare("v0.21_1");
+use version; our $VERSION = version->declare("v0.23_1");
 
 use 5.010;
 use MooseX::Singleton;
 use MooseX::StrictConstructor;
 use	MooseX::HasDefaults::RO;
 use DateTime;
-use Carp qw( croak );
+use Carp qw( croak cluck );
 our @CARP_NOT = qw(
 		Log::Shiras::Switchboard
 		Log::Shiras::Telephone
@@ -22,14 +22,6 @@ use MooseX::Types::Moose qw(
 		CodeRef
     );
 #~ use Data::Dumper;
-#~ use Moose::Exporter;
-#~ Moose::Exporter->setup_import_methods(
-    #~ as_is => [ 'get_operator', ],#'get_telephone', 
-#~ );
-use MooseX::ShortCut::BuildInstance 0.008 qw( build_instance );
-#~ use lib
-	#~ '../../../lib',
-	#~ '../../../../Data-Walk-Extracted/lib';
 use Data::Walk::Extracted 0.024;
 use Data::Walk::Prune 0.024;
 use Data::Walk::Clone 0.024;
@@ -56,8 +48,6 @@ my 	@default_levels = (
 		undef, undef, undef, undef, undef, 'eleven',# This one goes to eleven :^|
 	);
 my $time_zone = DateTime::TimeZone->new( name => 'local' );
-our	$debug_filter = 0;
-###### <where> - time_zone: $time_zone
 
 #########1 import   2#########3#########4#########5#########6#########7#########8#########9
 
@@ -67,14 +57,13 @@ sub import {
     my(%tags) = map { $_ => 1 } @args;
 	my	$instance;
     if(exists $tags{':debug'}) {
-		#~ print "Found :debug tag in Log::Shiras::Switchboard v0.21!\n";
+		cluck ":debug tag requested for Log::Shiras::Switchboard!\n";
         my $FILTER_MODULE = "Filter::Util::Call";
         if(! "require $FILTER_MODULE" ) {
             die "$FILTER_MODULE required with :debug" .
                 "(install from CPAN)";
-        }else{
-			#~ print "'$FILTER_MODULE' found!\n";
-		}
+        }
+		
         eval "require $FILTER_MODULE" or die "Cannot pull in $FILTER_MODULE";
         Filter::Util::Call::filter_add(
             sub {
@@ -84,20 +73,12 @@ sub import {
                 $status;
                 }
 		);
-		$debug_filter = 1;
+		$ENV{log_shiras_filter_on} = 1;
 		#~ print "debug filter set for Switchboard v0.21!\n";
         delete $tags{':debug'};
     }
- 
-    #~ if(exists $tags{':self_report'}) {
-		#~ $instance //= shift->instance;#Returns a pre-existing instance if it exists
-		#~ $instance->_set_self_report( sub{ s/^\s*###LogSSR//mg } );
-		#~ if( !eval{ require Filter::Simple $self->_release_self_report } ){
-            #~ die "$FILTER_MODULE required with :resurrect" .
-                #~ "(install from CPAN)";
-        #~ }
-        #~ delete $tags{':resurrect'};
-    #~ }
+	#~ warn "The debug filter setting is: $ENV{log_shiras_filter_on}\n";
+	eval 'use MooseX::ShortCut::BuildInstance 0.030 qw( build_instance )';
  
     if(keys %tags) {
         # We received an Option we couldn't understand.
@@ -477,24 +458,9 @@ sub clear_buffer{
 has '_data_walker' =>(
     is		=> 'ro',
 	isa		=> 'Walker',
-	default	=> sub{ build_instance(
-		package => 'Walker',
-		superclasses => ['Data::Walk::Extracted',],
-		roles =>[
-			'Data::Walk::Graft',
-			'Data::Walk::Clone',
-			'Data::Walk::Prune',
-			'Data::Walk::Print',
-		],
-		skipped_nodes =>{
-			OBJECT => 1,
-			CODEREF => 1,
-		},
-		to_string => 1,
-	) },
+	builder	=> '_build_data_walker', 
 	handles =>[ qw(graft_data prune_data print_data ) ],
-	required => 1,
-	init_arg => undef,
+	lazy	=>1,
 );
 
 has '_buffer' =>(
@@ -988,6 +954,29 @@ sub _internal_talk{
 	}
 	return $result;
 }
+
+sub _build_data_walker{
+	return build_instance(
+		package => 'Walker',
+		superclasses => ['Data::Walk::Extracted',],
+		roles =>[
+			'Data::Walk::Graft',
+			'Data::Walk::Clone',
+			'Data::Walk::Prune',
+			'Data::Walk::Print',
+		],
+		skipped_nodes =>{
+			OBJECT => 1,
+			CODEREF => 1,
+		},
+		to_string => 1,
+	);
+};
+
+#~ sub DEMOLISH{
+	#~ my ( $self ) = @_;
+	#~ delete $ENV{log_shiras_filter_on};
+#~ }
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 

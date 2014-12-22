@@ -1,5 +1,5 @@
 package Log::Shiras::Telephone;
-use version; our $VERSION = qv("v0.21_3");
+use version; our $VERSION = qv("v0.23_1");
 use 5.010;# defined or
 use Moose;
 use MooseX::StrictConstructor;
@@ -7,9 +7,7 @@ use MooseX::Types::Moose qw(
 		Bool
 		ArrayRef
     );
-#~ Moose::Exporter->setup_import_methods(
-    #~ as_is => [ 'debug_line' ],#
-#~ );
+use Data::Dumper;
 use lib '../../../lib',;
 use Log::Shiras::Types qw(
 		namespace
@@ -150,9 +148,7 @@ sub talk{
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 
 no Moose;
-__PACKAGE__->meta->make_immutable(
-	inline_constructor => 0,
-);
+__PACKAGE__->meta->make_immutable;
 	
 1;
 

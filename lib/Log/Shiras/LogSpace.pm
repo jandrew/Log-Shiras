@@ -6,6 +6,8 @@ use Types::Standard qw(
 		Str
     );
 
+my $test = qr/^(Module::Runtime|Moose|Moose::Util|Moose::Exporter)$/;
+
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
 has log_space =>(
@@ -13,7 +15,15 @@ has log_space =>(
 		isa		=> Str,
 		reader	=> 'get_log_space',
 		writer	=> 'set_log_space',
-		default	=> __PACKAGE__,
+		default	=> sub{
+			my $x = 0;
+			while( (caller( $x ))[0] =~ $test ){
+				#~ print "don't use: " . (caller( $x ))[0] . "\n";
+				$x++;
+			}
+			#~ print "Using: " . (caller( $x ))[0] . "\n";
+			return (caller( $x ))[0];
+		},
 	);
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9

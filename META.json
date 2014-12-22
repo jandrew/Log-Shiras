@@ -40,7 +40,6 @@
             "Moose::Role" : "0",
             "MooseX::HasDefaults::RO" : "0",
             "MooseX::NonMoose" : "0",
-            "MooseX::ShortCut::BuildInstance" : "1.028",
             "MooseX::Singleton" : "0",
             "MooseX::StrictConstructor" : "0",
             "MooseX::Types" : "0",
@@ -109,67 +108,67 @@
    "provides" : {
       "Log::Shiras" : {
          "file" : "lib/Log/Shiras.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::LogSpace" : {
          "file" : "lib/Log/Shiras/LogSpace.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Report" : {
          "file" : "lib/Log/Shiras/Report.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Report::ShirasFormat" : {
          "file" : "lib/Log/Shiras/Report/ShirasFormat.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Report::TieFile" : {
          "file" : "lib/Log/Shiras/Report/TieFile.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Report::XLSXFile" : {
          "file" : "lib/Log/Shiras/Report/XLSXFile.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Switchboard" : {
          "file" : "lib/Log/Shiras/Switchboard.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::TapPrint" : {
          "file" : "lib/Log/Shiras/TapPrint.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::TapWarn" : {
          "file" : "lib/Log/Shiras/TapWarn.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Telephone" : {
          "file" : "lib/Log/Shiras/Telephone.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::TelephoneII" : {
          "file" : "lib/Log/Shiras/TelephoneII.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::TrafficControl" : {
          "file" : "lib/Log/Shiras/TrafficControl.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::Types" : {
          "file" : "lib/Log/Shiras/Types.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Log::Shiras::UnhideDebug" : {
          "file" : "lib/Log/Shiras/UnhideDebug.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Silent" : {
          "file" : "lib/Log/Shiras/TrafficControl.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       },
       "Test::Log::Shiras" : {
          "file" : "lib/Test/Log/Shiras_old.pm",
-         "version" : "v0.21_1"
+         "version" : "v0.23_1"
       }
    },
    "release_status" : "testing",
@@ -184,7 +183,7 @@
          "web" : "https://github.com/jandrew/Log-Shiras"
       }
    },
-   "version" : "v0.21_1",
+   "version" : "v0.23_1",
    "x_authority" : "cpan:JANDREW"
 }
 
