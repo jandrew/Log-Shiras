@@ -98,7 +98,7 @@ my %WriteMakefileArgs = (
     "version" => "0.94",
     "warnings" => 0
   },
-  "VERSION" => "v0.23_1",
+  "VERSION" => "v0.25_1",
   "test" => {
     "TESTS" => "t/*.t t/Log/Shiras/*.t"
   }

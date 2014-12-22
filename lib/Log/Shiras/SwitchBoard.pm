@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version; our $VERSION = version->declare("v0.23_1");
+use version; our $VERSION = version->declare("v0.25_1");
 
 use 5.010;
 use MooseX::Singleton;
@@ -57,7 +57,7 @@ sub import {
     my(%tags) = map { $_ => 1 } @args;
 	my	$instance;
     if(exists $tags{':debug'}) {
-		cluck ":debug tag requested for Log::Shiras::Switchboard!\n";
+		cluck ":debug tag requested for Log::Shiras::Switchboard!";
         my $FILTER_MODULE = "Filter::Util::Call";
         if(! "require $FILTER_MODULE" ) {
             die "$FILTER_MODULE required with :debug" .

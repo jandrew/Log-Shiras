@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version; our $VERSION = version->declare("v0.23_1");
+use version; our $VERSION = version->declare("v0.27_1");
 
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__
