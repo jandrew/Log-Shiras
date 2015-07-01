@@ -24,7 +24,8 @@ has 'name_space' =>(
 	isa		=> namespace,
 	writer	=> 'set_name_space',
 	default	=> sub{ 
-		my $name_space = $switchboard->get_caller( 10 )->{up_sub};
+		my 	$name_space = $switchboard->get_caller( 10 )->{up_sub};
+			$name_space //= 'main';
 		$switchboard->_internal_talk( { report => 'log_file', level => 3,######### Logging
 			name_space => 'Log::Shiras::Telephone::name_space',
 			message =>	[ "No name_space set so  Log::Shiras::Telephone will use: $name_space" ], } );
