@@ -11,15 +11,16 @@ use Carp qw( cluck );
 
 use constant INTERNAL_DEBUG => 0;
 my	$my_unhide_skip_check =
-		qr/(
+		qr/( 
 			^MooseX.ShortCut|	^Archive.Zip|		^File|
 			^UNIVERSAL|			^IO.File|			^Compress.Raw|
 			^FileHandle|		^File.Copy|			^Time.Local|
 			^XML.LibXML|		^Encode|			^XML.SAX|
 			^Log|				^Type|				^DateTime(?!X)|
 			^Class.Factory|		^Module.Pluggable	^Devel|
-			^Clone				^Moose(?!X)
+			^Clone|				^Moose(?!X)|		^Win32
 		)/x;
+our	$run_once_hash;
 
 ###########################################
 sub import {
@@ -67,7 +68,7 @@ sub resurrector_loader {
 
       # Skip Log4perl appenders
     if($module =~ $my_unhide_skip_check) {
-		cluck "Don't scrub $module (it's on the skip list)\n" if INTERNAL_DEBUG;
+		cluck "Don't scrub |$module| (it's on the skip list)\n" if INTERNAL_DEBUG;
         return undef;
     }else{
 		print "Module: $module\nDoesn't match: $my_unhide_skip_check\n" if INTERNAL_DEBUG;;
@@ -88,8 +89,13 @@ sub resurrector_loader {
     }
 
     print "Unhiding debug in module $path\n" if INTERNAL_DEBUG;
-
-    my $fh = resurrector_fh($path);
+	my	$fh;
+	if( exists $Log::Shiras::UnhideDebug::run_once_hash->{$path} ){
+		print "No action since this is already done\n" if INTERNAL_DEBUG;
+	}else{
+		$fh = resurrector_fh($path);
+		$Log::Shiras::UnhideDebug::run_once_hash->{$path} = 1;
+	}
 
     my $abs_path = File::Spec->rel2abs( $path );
     print "Setting %INC entry of $module to $abs_path\n" if INTERNAL_DEBUG;

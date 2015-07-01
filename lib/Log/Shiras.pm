@@ -264,6 +264,11 @@ the addition of adding a prebuilt connection to the switchboard in the instance.
 Since the 'Telephone' is connected to the switchboard the rules registered with 
 the switchboard are applied with each use of the telephone.
 
+Warning: The telephone will generally not work for the 'import' sub.  You can use the debug 
+unhider there but most of the rest of this package is not available.  If you get it to 
+work thats great but it is not supported and therefore no bug reports for issues 
+in the import sub will be accepted.
+
 
 =head1 Differentiation
 

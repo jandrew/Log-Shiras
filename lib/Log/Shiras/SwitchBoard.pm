@@ -166,6 +166,7 @@ has 'skip_up_caller' =>(
 		^Capture::
 		\(eval\)
 		^Class::MOP
+		Sandbox
 	) ] },
 );
 		#~ TapWarn::__ANON__$
