@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version; our $VERSION = version->declare("v0.25_1");
+use version; our $VERSION = qv("v0.25_1");
 
 use 5.010;
 use MooseX::Singleton;
