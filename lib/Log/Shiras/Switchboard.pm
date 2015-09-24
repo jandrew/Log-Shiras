@@ -6,7 +6,7 @@ use MooseX::Singleton;
 use MooseX::StrictConstructor;
 use	MooseX::HasDefaults::RO;
 use DateTime;
-use Carp qw( croak cluck );
+use Carp qw( croak cluck carp confess );
 our @CARP_NOT = qw(
 		Log::Shiras::Switchboard
 		Log::Shiras::Telephone
@@ -55,13 +55,14 @@ sub import {
     my( $class, @args ) = @_;
  
     my(%tags) = map { $_ => 1 } @args;
+	#~ warn "Tags are loaded to the hash";
 	my	$instance;
     if(exists $tags{':debug'}) {
-		cluck ":debug tag requested for Log::Shiras::Switchboard!";
+		#~ cluck ":debug tag requested for Log::Shiras::Switchboard!";
         my $FILTER_MODULE = "Filter::Util::Call";
         if(! "require $FILTER_MODULE" ) {
-            die "$FILTER_MODULE required with :debug" .
-                "(install from CPAN)";
+            confess "$FILTER_MODULE required with :debug" .
+                " - not installed - (install from CPAN)";
         }
 		
         eval "require $FILTER_MODULE" or die "Cannot pull in $FILTER_MODULE";
@@ -84,6 +85,7 @@ sub import {
         # We received an Option we couldn't understand.
         die "Unknown Option(s): @{[keys %tags]}";
     }
+	#~ warn "Finished the switchboard import";
 }
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9

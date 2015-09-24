@@ -1,17 +1,17 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = qv('v0.21_1');
+use version; our $VERSION = qv('v0.23_1');
 
 use Moose::Role;
 use Types::Standard qw(
 		Str
     );
-
+use Carp 'cluck';
+use Data::Dumper;
 my $test = qr/^(Module::Runtime|Moose|Moose::Util|Moose::Exporter|Eval::Closure::Sandbox_\d*)$/;
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
 has log_space =>(
-		is		=> 'ro',
 		isa		=> Str,
 		reader	=> 'get_log_space',
 		writer	=> 'set_log_space',
@@ -29,11 +29,18 @@ has log_space =>(
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
 
+sub get_all_space{
+	my ( $self ) = @_;
+	my	$all_space = $self->get_log_space;
+	if( $self->can( 'get_class_space' ) and length( $self->get_class_space ) > 0 ){
+		$all_space .= '::' . $self->get_class_space;
+	}
+	return $all_space;
+}
 
+#########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
 
 #########1 Private Methods    3#########4#########5#########6#########7#########8#########9
-
-
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 
