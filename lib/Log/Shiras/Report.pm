@@ -1,5 +1,5 @@
 package Log::Shiras::Report;
-use version 0.77; our $VERSION = qv("v0.20.2");
+use version 0.77; our $VERSION = qv("v0.20.4");
 
 use Moose::Role;
 use Data::Dumper;
