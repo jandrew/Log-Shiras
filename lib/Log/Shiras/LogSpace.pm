@@ -1,5 +1,5 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = qv('v0.23_1');
+use version; our $VERSION = version->declare('v0.23_1');
 
 use Moose::Role;
 use Types::Standard qw(
@@ -7,7 +7,7 @@ use Types::Standard qw(
     );
 use Carp 'cluck';
 use Data::Dumper;
-my $test = qr/^(Module::Runtime|Moose|Moose::Util|Moose::Exporter|Eval::Closure::Sandbox_\d*)$/;
+my $test = qr/^(Module::Runtime|Moose|Moose::Util|Moose::Exporter|Eval::Closure::Sandbox_\d*|MooseX::ShortCut::BuildInstance)$/;
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
@@ -15,15 +15,23 @@ has log_space =>(
 		isa		=> Str,
 		reader	=> 'get_log_space',
 		writer	=> 'set_log_space',
+		predicate	=> 'has_log_space',
 		default	=> sub{
 			my $x = 0;
-			print "Testing: " . (caller( $x ))[0] . "\nAgainst" . $test;
+			#~ print "Testing: " . (caller( $x ))[0] . "\nAgainst" . $test;
 			while( (caller( $x ))[0] =~ $test ){
-				print "don't use: " . (caller( $x ))[0] . "\n";
+				#~ print "don't use: " . (caller( $x ))[0] . "\n";
 				$x++;
 			}
-			print "Using: " . (caller( $x ))[0] . "\n";
+			#~ print "Using: " . (caller( $x ))[0] . "\n";
 			return (caller( $x ))[0];
+		},
+		trigger => sub{# for classes (and rolls) with function calls rather than method calls
+			my ( $self, $log_space ) = @_;
+			#~ print "Just set log_space to: $log_space\n";
+			if( defined ${__PACKAGE__::log_space} ){
+				${__PACKAGE__::log_space} = $log_space;
+			}
 		},
 	);
 
