@@ -1,5 +1,5 @@
 package Log::Shiras::TapWarn;
-use version; our $VERSION = version->declare("v0.37.7");
+use version; our $VERSION = version->declare("v0.37.9");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTaPWarN );
 ###InternalTaPWarN	warn "You uncovered internal logging statements for Log::Shiras::TapWarn-$VERSION" if !$ENV{hide_warn};

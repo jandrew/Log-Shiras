@@ -1,5 +1,5 @@
 package Log::Shiras::Report::Test2Note;
-use version; our $VERSION = version->declare("v0.37.7");
+use version; our $VERSION = version->declare("v0.37.9");
 use Data::Dumper;
 use Test2::Tools::Basic;
 

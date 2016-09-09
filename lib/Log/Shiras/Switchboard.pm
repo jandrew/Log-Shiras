@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version 0.77; our $VERSION = version->declare("v0.37.7");
+use version 0.77; our $VERSION = version->declare("v0.37.9");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalSwitchboarD );
 ###InternalSwitchboarD	warn "You uncovered internal logging statements for Log::Shiras::Switchboard-$VERSION" if !$ENV{hide_warn};
