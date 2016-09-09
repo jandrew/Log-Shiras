@@ -35,6 +35,7 @@ my %WriteMakefileArgs = (
     "File::Copy" => 0,
     "File::Spec" => 0,
     "File::Temp" => 0,
+    "FileHandle" => 0,
     "IO::Callback" => 0,
     "IO::File" => 0,
     "JSON::XS" => 0,
@@ -69,7 +70,7 @@ my %WriteMakefileArgs = (
     "Test::File" => 0,
     "Test::Moose" => 0
   },
-  "VERSION" => "v0.37.0",
+  "VERSION" => "v0.37.3",
   "test" => {
     "TESTS" => "t/Log/Shiras/*.t t/Log/Shiras/Report/*.t"
   }
@@ -90,6 +91,7 @@ my %FallbackPrereqs = (
   "File::Copy" => 0,
   "File::Spec" => 0,
   "File::Temp" => 0,
+  "FileHandle" => 0,
   "Filter::Util::Call" => "1.55",
   "IO::Callback" => 0,
   "IO::File" => 0,

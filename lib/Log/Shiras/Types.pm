@@ -1,5 +1,5 @@
 package Log::Shiras::Types;
-use version; our $VERSION = version->declare("v0.37.0");
+use version; our $VERSION = version->declare("v0.37.3");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTypeSShirasFormat :InternalTypeSFileHash :InternalTypeSReportObject :InternalTypeSHeadeR);
 ###InternalTypeSShirasFormat	use Data::Dumper;
@@ -9,6 +9,7 @@ use version; our $VERSION = version->declare("v0.37.0");
 use utf8;
 use Carp qw( confess );
 use IO::File;
+use FileHandle;
 use Fcntl qw( :flock LOCK_EX );# SEEK_END
 use MooseX::ShortCut::BuildInstance v1.42 qw( build_instance should_re_use_classes );
 should_re_use_classes( 1 );
@@ -37,7 +38,7 @@ my	$split_regex	= qr/
         ([^%]*)							# inserted string
         (%([^%]*?)			# get modifiers
 			(	($producer_char)|		# get terminator characters
-				($standard_char)))	# 
+				($standard_char)))	#
     /x;
 my	$sprintf_dispatch =[
 		[ \&_append_to_string, ],# 0
@@ -83,7 +84,7 @@ my  $sprintf_regex 	= qr/
 			($producer_char)	)	#		producer character
         \Z                  		# End of the line
     /sxmp;
-my	$shiras_format_ref = { 
+my	$shiras_format_ref = {
 		final 		=> 1,
 		alt_input 	=> 1,
 		bump_list	=> 1,
@@ -93,14 +94,14 @@ my  $yamlextention	= qr/\.(?i)(yml|yaml)/;
 my  $jsonextention	= qr/\.(?i)(jsn|json)/;
 my  $coder 			= JSON::XS->new->ascii->pretty->allow_nonref;#
 my 	$switchboard_attributes = [ qw(
-		name_space_bounds reports buffering 
+		name_space_bounds reports buffering
 		conf_file logging_levels
 	) ];
 our $recursion_block = 0;
 use constant IMPORT_DEBUG => 1; # Author testing only
 
 #########1 subtype Library    3#########4#########5#########6#########7#########8#########9
-	
+
 subtype ElevenArray, as ArrayRef,
     where{ scalar( @$_ ) < 13 },
     message{ "This goes past the eleventh position! :O" };
@@ -108,7 +109,7 @@ subtype ElevenArray, as ArrayRef,
 subtype PosInt, as Int,
     where{ $_ >= 0 },
     message{ "$_ is not a positive integer" };
-	
+
 subtype ElevenInt, as PosInt,
     where{ $_ < 12 },
     message{ "This goes past eleven! :O" };
@@ -144,7 +145,7 @@ coerce ShirasFormat, from Str,
 					push @{$finished_ref->{init_parse}}, $pre;
 					$start = 0;
 				}elsif( $pre ){
-					return "Coersion to 'ShirasFormat' failed for section -$pre- in " . 
+					return "Coersion to 'ShirasFormat' failed for section -$pre- in " .
 						__FILE__ . " at line " . __LINE__ . ".\n";
 				}
 				if( $post =~ /^([^{]*){([^}]*)}(.)(\(([^)]*)\))?(.*)$/ ){
@@ -177,8 +178,8 @@ coerce ShirasFormat, from Str,
 ###InternalTypeSShirasFormat	warn "matched:" . Dumper( @list );
 ###InternalTypeSShirasFormat	warn "for segment: $&";
 			if( $list[2] and $list[4] and $list[4] eq '%' ){
-				return "Coersion to 'ShirasFormat' failed for the segment: " . 
-					$list[1] . " using " . __FILE__ . " at line " . 
+				return "Coersion to 'ShirasFormat' failed for the segment: " .
+					$list[1] . " using " . __FILE__ . " at line " .
 					__LINE__ . ".\n";
 			}
 			my  $pre_string				= $list[0];
@@ -186,7 +187,7 @@ coerce ShirasFormat, from Str,
 			$finished_ref->{new_chunk}	= $list[1];
 			my 	$consumer_format 		= $list[5];
 			my	$producer_format		= $list[4];
-				$parsed_length	   	   += 
+				$parsed_length	   	   +=
 					length( $finished_ref->{new_chunk} ) + length( $pre_string );
 				$input					= ${^POSTMATCH};
 			my  $pre_match				= ${^PREMATCH};
@@ -211,7 +212,7 @@ coerce ShirasFormat, from Str,
 				delete $finished_ref->{new_chunk};
 				next;
 			}
-			
+
 			if( !is_HashRef( $finished_ref ) ){
 ###InternalTypeSShirasFormat	warn "fail:" . Dumper( $finished_ref );
 				return $finished_ref;
@@ -307,7 +308,7 @@ coerce HeaderArray, from ArrayRef,
 		}
 		return $new_ref;
     };
-	
+
 subtype YamlFile, as Str,
 	where{ $_ =~ $yamlextention and -f $_ },
 	message{ $_ };
@@ -315,12 +316,12 @@ subtype YamlFile, as Str,
 subtype JsonFile, as Str,
 	where{ $_ =~ $jsonextention and -f $_ },
 	message{ $_ };
-	
+
 subtype FileHash, as HashRef,
 	message{ $_ };
 ###InternalTypeSFileHash	warn "You uncovered internal logging statements for the Type FileHash in Log::Shiras::Types-$VERSION" if !$ENV{hide_warn};
 coerce FileHash, from YamlFile,
-	via{ 
+	via{
 		my @Array = LoadFile( $_ );
 ###InternalTypeSFileHash	warn "downloaded file:" . Dumper( @Array );
 		return ( ref $Array[0] eq 'HASH' ) ?
@@ -338,9 +339,9 @@ coerce FileHash, from JsonFile,
 ###InternalTypeSFileHash	warn "converted file:" . Dumper( $ref );
 		return $ref ;
 	};
-	
+
 subtype ArgsHash, as HashRef,
-	where{ 
+	where{
 		my  $result = 0;
 		for my $key ( @$switchboard_attributes ){
 			if( exists $_->{$key} ){
@@ -351,38 +352,38 @@ subtype ArgsHash, as HashRef,
 		return $result;
 	},
 	message{ 'None of the required attributes were passed' };
-	
+
 coerce ArgsHash, from FileHash,
 	via{ $_ };
-	
+
 subtype ReportObject, as Object,
 	where{ $_->can( 'add_line' ) },
 	message{ $_ };
 ###InternalTypeSReportObject	warn "You uncovered internal logging statements for the Type ReportObject in Log::Shiras::Types-$VERSION" if !$ENV{hide_warn};
 coerce ReportObject, from FileHash,
-	via{ 
+	via{
 ###InternalTypeSReportObject	warn "the passed value is:" . Dumper( @_ );
 		return build_instance( %$_ );
 	};
-	
+
 subtype NameSpace, as Str,
 	where{
 		my  $result = 1;
 		$result = 0 if( !$_ or $_ =~ / / );
 		return $result;
 	},
-	message{ 
+	message{
 		my $passed = ( ref $_ eq 'ARRAY' ) ? join( '::', @$_ ) : $_;
 		return "-$passed- could not be coerced into a string without spaces";
 	};
-	
+
 coerce NameSpace, from ArrayRef,
 	via{ return join( '::', @$_ ) };
 
 subtype CSVFile,
 	as Str,
 	where{ $_ =~ /\.(csv)$/i and -r $_};
-	
+
 coerce CSVFile,
 	from Str,
 	via{	my $fh = IO::File->new;
@@ -439,7 +440,7 @@ subtype IOFileType,
 			#~ $fh->binmode();
 			#~ flock( $fh, LOCK_EX );
 			#~ return $fh;							};
-		
+
 
 #########1 Private Methods	  3#########4#########5#########6#########7#########8#########9
 
@@ -453,7 +454,7 @@ sub _has_shiras_keys{
 ###InternalTypeSShirasFormat	warn "testing key: $key";
 			if( !(exists $shiras_format_ref->{$key}) ){
 ###InternalTypeSShirasFormat	warn "failed at key: $key";
-				### <where> - 
+				### <where> -
 				$result = 0;
 				last;
 			}
@@ -487,7 +488,7 @@ sub _process_sprintf_format{
 			$x++;
 		}
     } else {
-        $ref = "Failed to match -" . $ref->{new_chunk} . 
+        $ref = "Failed to match -" . $ref->{new_chunk} .
 					"- as a (modified) sprintf chunk";
     }
 ###InternalTypeSShirasFormat	warn "after _process_sprintf_format:" . Dumper( $ref );
@@ -521,7 +522,7 @@ sub _set_consumption{
 	my ( $item, $item_ref ) = @_;
 ###InternalTypeSShirasFormat	warn "reached _set_consumption with:" . Dumper( $item );
 	if( !$item_ref->{no_primary_consumption} ){
-		push @{$item_ref->{bump_list}}, 
+		push @{$item_ref->{bump_list}},
 			((exists $item_ref->{bump_count})?$item_ref->{bump_count}:0);
 	}
 	delete $item_ref->{no_primary_consumption};
@@ -537,26 +538,26 @@ sub _remove_consumption{
 
 sub _set_insert_call{
 	my ( $item, $item_ref ) = @_;
-	$item_ref->{alt_position} = ( $item_ref->{alt_position} ) ? 
+	$item_ref->{alt_position} = ( $item_ref->{alt_position} ) ?
 		$item_ref->{alt_position} : 0 ;
 	$item_ref->{bump_count}++;
 ###InternalTypeSShirasFormat	warn "reached _set_insert_call with:" . Dumper( $item );
 ###InternalTypeSShirasFormat	warn "using position:" . Dumper( $item_ref->{alt_position} );
 ###InternalTypeSShirasFormat	warn "with new bump level:" . Dumper( $item_ref->{bump_count} );
-	my $new_ref = [ 
+	my $new_ref = [
 		$item_ref->{alt_input}->[$item_ref->{alt_position}]->[1],
 		$item_ref->{alt_input}->[$item_ref->{alt_position}]->[0],
 	];
 	if( $item_ref->{alt_input}->[$item_ref->{alt_position}]->[2] ){
 		my $dispatch = undef;
-		for my $value ( 
-			split /,|=>/, 	
+		for my $value (
+			split /,|=>/,
 				$item_ref->{alt_input}->[$item_ref->{alt_position}]->[2] ){
 			$value =~ s/\s//g;
 			$value =~ s/^['"]([^'"]*)['"]$/$1/g;
 			push @$new_ref, $value;
 			if( $dispatch ){
-				$item_ref->{bump_count} -= 
+				$item_ref->{bump_count} -=
 					( $value =~/^\d+$/ )? $value :
 					( $value =~/^\*$/ )? 1 : 0 ;
 				$dispatch = undef;
@@ -566,7 +567,7 @@ sub _set_insert_call{
 		}
 	}
 	$item_ref->{alt_input}->[$item_ref->{alt_position}] = { commands => $new_ref };
-	$item_ref->{alt_input}->[$item_ref->{alt_position}]->{start_at} = 
+	$item_ref->{alt_input}->[$item_ref->{alt_position}]->{start_at} =
 		( exists $item_ref->{bump_list} ) ?
 			$#{$item_ref->{bump_list}} + 1 : 0 ;
 	$item_ref->{alt_position}++;
@@ -605,7 +606,7 @@ __END__
 Log::Shiras::Types - The Type::Tiny library for Log::Shiras
 
 =head1 SYNOPSIS
-    
+
 	#!perl
 	package Log::Shiras::Report::MyRole;
 
@@ -632,8 +633,8 @@ Log::Shiras::Types - The Type::Tiny library for Log::Shiras
 
 This is the custom type class that ships with the L<Log::Shiras> package.
 
-There are only subtypes in this package!  B<WARNING> These types should be 
-considered in a beta state.  Future type fixing will be done with a set of tests in 
+There are only subtypes in this package!  B<WARNING> These types should be
+considered in a beta state.  Future type fixing will be done with a set of tests in
 the test suit of this package.  (currently few are implemented)
 
 See L<MooseX::Types> for general re-use of this module.
@@ -664,7 +665,7 @@ See L<MooseX::Types> for general re-use of this module.
 
 =over
 
-=item B<Definition: >an array with up to 12 total positions [0..11] 
+=item B<Definition: >an array with up to 12 total positions [0..11]
 L<I<This one goes to eleven>|https://en.wikipedia.org/wiki/This_Is_Spinal_Tap>
 
 =item B<Coercions: >no coersion available
@@ -675,123 +676,123 @@ L<I<This one goes to eleven>|https://en.wikipedia.org/wiki/This_Is_Spinal_Tap>
 
 =over
 
-=item B<Definition: >this is the core of the L<Log::Shiras::Report::ShirasFormat> module.  
+=item B<Definition: >this is the core of the L<Log::Shiras::Report::ShirasFormat> module.
 When prepared the final 'ShirasFormat' definition is a hashref that contains three keys;
 
 =over
 
 =item B<final> - a sprintf compliant format string
 
-=item B<alt_input> - an arrayref of input definitions and positions for all the additional 
+=item B<alt_input> - an arrayref of input definitions and positions for all the additional
 'ShirasFormat' modifications allowed
 
-=item B<bump_list> - a record of where and how many new inputs will be inserted 
+=item B<bump_list> - a record of where and how many new inputs will be inserted
 in the passed data for formatting the sprintf compliant string
 
 =back
 
-In order to simplify sprintf formatting I approached the sprintf definition as having 
+In order to simplify sprintf formatting I approached the sprintf definition as having
 the following sequence;
 
 =over
 
-=item B<Optional - Pre-string, > any pre-string that would be printed as it stands 
+=item B<Optional - Pre-string, > any pre-string that would be printed as it stands
 (not interpolated)
 
 =item B<Required - %, >this indicates the start of a formating definition
 
-=item B<Optional - L<Flags|http://perldoc.perl.org/functions/sprintf.html#flags>, > 
-any one or two of the following optional flag [\s\-\+0#] as defined in the sprintf 
+=item B<Optional - L<Flags|http://perldoc.perl.org/functions/sprintf.html#flags>, >
+any one or two of the following optional flag [\s\-\+0#] as defined in the sprintf
 documentation.
 
-=item B<Optional - 
+=item B<Optional -
 L<Order of arguments|http://perldoc.perl.org/functions/sprintf.html#order-of-arguments>, >
 indicate some other position to obtain the formatted value.
 
-=item B<Optional - 
-L<Vector flag|http://perldoc.perl.org/functions/sprintf.html#vector-flag>, >to treat 
-each input character as a value in a vector then you use the vector flag with it's 
+=item B<Optional -
+L<Vector flag|http://perldoc.perl.org/functions/sprintf.html#vector-flag>, >to treat
+each input character as a value in a vector then you use the vector flag with it's
 optional vector separator definition.
 
-=item B<Optional - 
+=item B<Optional -
 L<Minimum field width|http://perldoc.perl.org/functions/sprintf.html#(minimum)-width>, >
 This defines the space taken for presenting the value
 
-=item B<Optional - 
+=item B<Optional -
 L<Maximum field width|http://perldoc.perl.org/functions/sprintf.html#precision%2c-or-maximum-width>, >
-This defines the maximum length of the presented value.  If maximum width is smaller 
-than the minimum width then the value is truncatd to the maximum width and presented 
+This defines the maximum length of the presented value.  If maximum width is smaller
+than the minimum width then the value is truncatd to the maximum width and presented
 in the mimimum width space as defined by the flags.
 
-=item B<Required - 
+=item B<Required -
 L<Data type definition|http://perldoc.perl.org/functions/sprintf.html#sprintf-FORMAT%2c-LIST>, >
-This is done with an upper or lower case letter as described in the sprintf documentation.  Only 
-the letters defined in the sprintf documentation are supported.  These letters close the 
+This is done with an upper or lower case letter as described in the sprintf documentation.  Only
+the letters defined in the sprintf documentation are supported.  These letters close the
 sprintf documentation segment started with '%'.
 
 =back
 
-The specific combination of these values is defined in the perldoc 
+The specific combination of these values is defined in the perldoc
 L<sprintf|http://perldoc.perl.org/functions/sprintf.html>.
 
 The module ShirasFormat expands on this definitions as follows;
 
 =over
 
-=item B<Word in braces {}, > just prior to the L</Data type definition> you can 
-begin a sequence that starts with a word (no spaces) enclosed in braces.  This word will 
+=item B<Word in braces {}, > just prior to the L</Data type definition> you can
+begin a sequence that starts with a word (no spaces) enclosed in braces.  This word will
 be the name of the source data used in this format sequence.
 
-=item B<Source indicator qr/[MP]/, > just after the L</Word in braces {}> you must indicate 
+=item B<Source indicator qr/[MP]/, > just after the L</Word in braces {}> you must indicate
 where the code should look for this information.  There are only two choices;
 
 =over
 
-=item B<P> - a passed value in the message hash reference.  The word in braces should be an 
-exact match to a key in the message hashref. The core value used for this ShirasFormat 
+=item B<P> - a passed value in the message hash reference.  The word in braces should be an
+exact match to a key in the message hashref. The core value used for this ShirasFormat
 segemnt will be the value assigned to that key.
 
-=item B<M> - a method name to be discovered by the class.  I<This method must exist at the 
-time the format is set!>  When the Shiras format string is set the code will attempt to 
-locate the method and save the location for calling this method to speed up implementation of 
-ongoing formatting operations.  If the method does not exist when the format string is 
-set even if it will exist before data is passed for formatting then this call will fail.  
-if you want to pass a closure (subroutine reference) then pass it as the value in the mesage 
-hash L<part 
+=item B<M> - a method name to be discovered by the class.  I<This method must exist at the
+time the format is set!>  When the Shiras format string is set the code will attempt to
+locate the method and save the location for calling this method to speed up implementation of
+ongoing formatting operations.  If the method does not exist when the format string is
+set even if it will exist before data is passed for formatting then this call will fail.
+if you want to pass a closure (subroutine reference) then pass it as the value in the mesage
+hash L<part
 of the message ref|/a passed value in the message hash reference> and call it with 'P'.
 
 =back
 
-=item B<Code pairs in (), following the source indicator> often the passed information 
-is a code reference and for that code to be useful it needs to accept input.  These code 
-pairs are a way of implementing the code.  The code pairs must be in intended use sequence.  
-The convention is to write these in a fat comma list.  There is no limit to code pairs 
+=item B<Code pairs in (), following the source indicator> often the passed information
+is a code reference and for that code to be useful it needs to accept input.  These code
+pairs are a way of implementing the code.  The code pairs must be in intended use sequence.
+The convention is to write these in a fat comma list.  There is no limit to code pairs
 quatities. There are three possible keys for these pairs;
 
 =over
 
-=item B<m> this indicates a method call.  If the code passed is actually an object with 
+=item B<m> this indicates a method call.  If the code passed is actually an object with
 methods then this will call the value of this pair as a method on the code.
 
-=item B<i> this indicates regular input to the method and input will be provided to a 
+=item B<i> this indicates regular input to the method and input will be provided to a
 method using the value as follows;
 
 	$method( 'value' )
 
-=item B<l> this indicates lvalue input to the method and input will be provided to a 
+=item B<l> this indicates lvalue input to the method and input will be provided to a
 method using the value as follows;
 
 	$method->( 'value' )
-	
-=item B<[value]> Values to the methods can be provided in one of three ways. A B<string> 
-that will be sent to the method directly. An B<*> to indicate that the method will consume 
-the next value in the passed message array ref.  Or an B<integer> indicating how many of the 
-elements of the passed messay array should be consumed.  When elements of the passed 
+
+=item B<[value]> Values to the methods can be provided in one of three ways. A B<string>
+that will be sent to the method directly. An B<*> to indicate that the method will consume
+the next value in the passed message array ref.  Or an B<integer> indicating how many of the
+elements of the passed messay array should be consumed.  When elements of the passed
 message array are consumed they are consumed in order just like other sprintf elements.
 
 =back
 
-When a special ShirasFormat segment is called the braces and the Source indicator are 
+When a special ShirasFormat segment is called the braces and the Source indicator are
 manditory.  The code pairs are optional.
 
 =item B<Coercions: >from a modified sprintf format string
@@ -848,14 +849,14 @@ manditory.  The code pairs are optional.
 
 	name_space_bounds
 	reports
-	buffering 
+	buffering
 	ignored_caller_names
 	will_cluck
 	logging_levels
-	
+
 This are the primary switchboard settings.
 
-=item B<Coersion >from a L</JsonFile> or L</YamlFile> it will attempt to open the file 
+=item B<Coersion >from a L</JsonFile> or L</YamlFile> it will attempt to open the file
 and turn the file into a hashref that will pass the ArgsHash criteria
 
 =back
@@ -866,11 +867,11 @@ and turn the file into a hashref that will pass the ArgsHash criteria
 
 =item B<Definition: >an object that passes $object->can( 'add_line' )
 
-=item B<Coersion 1: >from a hashref it will use 
-L<MooseX::ShortCut::BuildInstance|http://search.cpan.org/~jandrew/MooseX-ShortCut-BuildInstance/lib/MooseX/ShortCut/BuildInstance.pm> 
+=item B<Coersion 1: >from a hashref it will use
+L<MooseX::ShortCut::BuildInstance|http://search.cpan.org/~jandrew/MooseX-ShortCut-BuildInstance/lib/MooseX/ShortCut/BuildInstance.pm>
 to build a report object if the necessary hashref is passed instead of an object
 
-=item B<Coersion 2: >from a L</JsonFile> or L</YamlFile> it will attempt to open the file 
+=item B<Coersion 2: >from a L</JsonFile> or L</YamlFile> it will attempt to open the file
 and turn the file into a hashref that can be used in L</Coersion 1>.
 
 =back
@@ -881,7 +882,7 @@ and turn the file into a hashref that can be used in L</Coersion 1>.
 
 =item B<$ENV{hide_warn}>
 
-The module will warn when debug lines are 'Unhide'n.  In the case where the you 
+The module will warn when debug lines are 'Unhide'n.  In the case where the you
 don't want these notifications set this environmental variable to true.
 
 =back
@@ -908,7 +909,7 @@ don't want these notifications set this environmental variable to true.
 
 =over
 
-=item Jed Lund 
+=item Jed Lund
 
 =item jandrew@cpan.org
 

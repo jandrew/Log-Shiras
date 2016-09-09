@@ -10,8 +10,16 @@ NOTE: This software is designated as beta quality until this notice is removed.
     Intitial CPAN release plus one year is probably the minimum before a v1.0 release.
 
 {{$NEXT}}
-	
+
 	* Another cool change
+
+v0.37.3   2016-09-10 05:41:10-07:00 America/Los_Angeles
+
+	! Another test to see why perl 5.10 isn't working
+
+v0.37.1   2016-09-09 16:47:04-07:00 America/Los_Angeles
+	
+	! A test to see why perl 5.10 isn't working
 
 v0.37.0   2016-09-09 16:21:04-07:00 America/Los_Angeles
 	

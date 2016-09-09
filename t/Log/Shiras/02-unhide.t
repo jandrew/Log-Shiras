@@ -24,15 +24,16 @@ BEGIN{
 	}
 	use Carp 'longmess';
 	$SIG{__WARN__} = sub{ print longmess $_[0]; };
-	$ENV{hide_warn_for_test} = 1;
+	$ENV{hide_warn} = 1;
 }
 $| = 1;
 use Test2::Plugin::UTF8;
 plan 4;
 use lib $lib, $examples_lib;
-use Module::Runtime qw( require_module );
+#~ use Module::Runtime qw( require_module ) or diag $!;
 use Log::Shiras::Unhide qw( :debug :Meditation  :Health :Family );
 use Level1;
+diag "Modules all loaded";
 SKIP: {
 	skip( "The filter module -Filter::Util::Call- is not installed", 3 ) if !$ENV{loaded_filter_util_call};
 			my	$basic = 'Nothing';
