@@ -13,6 +13,10 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.33.0   2016-09-09 15:51:35-07:00 America/Los_Angeles
+
+	! Fixed a test failing in perl 5.16 and 5.18
+
 v0.31.0   2016-09-09 14:35:20-07:00 America/Los_Angeles
 
 	! Added requirement for Filter::Util::Call to test
