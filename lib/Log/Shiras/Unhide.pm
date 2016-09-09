@@ -1,5 +1,5 @@
 package Log::Shiras::Unhide;
-use version; our $VERSION = version->declare("v0.37.3");
+use version; our $VERSION = version->declare("v0.37.5");
 use utf8;
 use 5.010;
 use strict;
