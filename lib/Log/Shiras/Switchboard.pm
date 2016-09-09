@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version 0.77; our $VERSION = version->declare("v0.29_1");
+use version 0.77; our $VERSION = version->declare("v0.30.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalSwitchboarD );
 ###InternalSwitchboarD	warn "You uncovered internal logging statements for Log::Shiras::Switchboard-$VERSION" if !$ENV{hide_warn};
@@ -66,7 +66,7 @@ has	reports =>(
 		},
 		default	=> sub{ {} },
 	);
-	
+
 has	logging_levels =>(
 		traits	=> ['Hash'],
 		isa		=> HashRef[ElevenArray],
@@ -104,7 +104,7 @@ sub import {
 	return 1 if $instance->_has_import_recursion_block; # Only accept the first build!
 	$instance->_set_import_recursion_block( 1 );
 	warn "Received args:" . join( '~|~', @args ) if @args and IMPORT_DEBUG;
-	
+
 	# Handle versions (and other nonsense)
 	if( $args[0] and $args[0] =~ /^v?\d+\.?\d*/ ){# Version check since import highjacks the built in
 		warn "Running version check on version: $args[0]" if IMPORT_DEBUG;
@@ -119,7 +119,7 @@ sub import {
 	if( @args ){
 		confess "Unknown flags passed to Log::Shiras::Switchboard: " . join( ' ', @args );
 	}
-	
+
 	# Still not sure why this is needed but maybe because of the singlton?
 	no warnings 'once';
 	if($Log::Shiras::Unhide::strip_match) {
@@ -127,7 +127,7 @@ sub import {
 	}
 	use warnings 'once';
 	warn "Finished the switchboard import" if IMPORT_DEBUG;
-} 
+}
 
 #Special MooseX::Singleton instantiation that pulls multiple instances into the same master case
 # This method won't report until the caller name_space and report destination are set up
@@ -217,11 +217,11 @@ sub master_talk{
 	###InternalSwitchboarD		warn '------------------->Recursion level 1 acceptable!' if TALK_DEBUG;
 	}else{
 	###InternalSwitchboarD		warn "Allowed recursion level exceeded!" if TALK_DEBUG;
-		return -1; # Special return state for recursion-fail 
+		return -1; # Special return state for recursion-fail
 	}
 	$self->_set_message_recursion_block( 1 + $recursion );
 	###InternalSwitchboarD	warn "Arrived at master_talk with the instructions:" . Dumper( $data_ref ) if TALK_DEBUG;
-	
+
 	# Check the NameSpace
 	###InternalSwitchboarD	warn "Checking if report -$data_ref->{report}- level -$data_ref->{level}- and NameSpace -$data_ref->{name_space}- are allowed to communicate" if TALK_DEBUG;
 	if(	$self->_can_communicate(
@@ -238,32 +238,32 @@ sub master_talk{
 		$self->_set_message_recursion_block( $recursion );# Early return so cleanup needed
 		return -3;
 	}
-	
+
 	# Handle fatal
 	###InternalSwitchboarD	warn 'Checking if this is a fatal message' if TALK_DEBUG;
 	my $fatality = $self->_is_fatal( $data_ref, $recursion );
 	confess $fatality if $fatality;
 	###InternalSwitchboarD	warn 'The message was not fatal!' if TALK_DEBUG;
-	
+
 	### Add some meta_data
 	# Add message time
 	$data_ref->{date_time} = DateTime->now( time_zone => $time_zone )->format_cldr( 'yyyy-MM-dd hh:mm:ss' );
-	
+
 	# Add carp_stack as needed
 	$data_ref = $self->_add_carp_stack( $data_ref );
-	
+
 	# Add source keys
 	$data_ref = $self->_add_caller( $data_ref );
 	###InternalSwitchboarD	warn "The message metadata load is complete" if TALK_DEBUG;
-	
+
 	# Check if the message is buffered
 	my	$y = $self->_buffer_decision( $data_ref );
 	###InternalSwitchboarD	warn "Buffer decision result: $y" if TALK_DEBUG;
-	
+
 	# Send message to report as needed
 	my $x = ( $y eq 'report' ) ? $self->_really_report( $data_ref ) : -2;
 	###InternalSwitchboarD	warn "Returned from _really_report-ing with: $x" if TALK_DEBUG;
-	
+
 	###InternalSwitchboarD	if( TALK_DEBUG ){
 	###InternalSwitchboarD		my $message = '<----';
 	###InternalSwitchboarD		$message .= $recursion == 1 ? '---------------' : '' ;
@@ -652,7 +652,7 @@ sub _add_caller{
 		last if $level > 6;# safety valve
 	}
 	#~ my $caller_ref = $data_ref->{source_sub} eq 'IO::Callback::print' ?
-						#~ $self->_alt_caller( $data_ref, $level ) : 
+						#~ $self->_alt_caller( $data_ref, $level ) :
 						#~ $self->_main_caller( $data_ref, $level );
 	#~ ###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
 	#~ ###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_add_caller',
@@ -670,7 +670,7 @@ sub _add_carp_stack{
 	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_add_carp_stack',
 	###InternalSwitchboarD		message =>[ "Arrived at _add_carp_stack for action: " . exists $data_ref->{carp_stack} ], } );
-	
+
 	if( $data_ref->{carp_stack} ){
 		my @carp_list = split( /\n\s*/, longmess() );
 		push @{$data_ref->{message}}, @carp_list;
@@ -689,7 +689,7 @@ sub _buffer_decision{
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_buffer_decision',
 	###InternalSwitchboarD		message =>[ "Arrived at _buffer_decision for report: $report_ref->{report}",
 	###InternalSwitchboarD					"..with buffer setting: " . $self->has_buffer( $report_ref->{report} ), ], } );
-	
+
 	# Check if the regular buffer is active (and load buffer or report)
 	my $x = 'report';
 	if(	$self->has_buffer( $report_ref->{report} ) ){
@@ -711,7 +711,7 @@ sub _load_test_buffer{
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_load_test_buffer',
 	###InternalSwitchboarD		message =>[ "Arrived at _test_buffer for report: $report_ref->{report}",
 	###InternalSwitchboarD					"..with test buffer setting: " . $self->_has_test_buffer( $report_ref->{report} ), ], } );
-		
+
 	# Start a test buffer for the report if it doesn't exist
 	if( !$self->_has_test_buffer( $report_ref->{report} ) ){
 		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
@@ -724,7 +724,7 @@ sub _load_test_buffer{
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_load_test_buffer',
 	###InternalSwitchboarD		message =>[ "Loading the line to the test buffer" ], } );
 	unshift @{$self->_get_test_buffer( $report_ref->{report} )}, $report_ref;
-	
+
 	# Reduce the buffer size as needed
 	while(	$#{$self->_get_test_buffer( $report_ref->{report} )} > $Log::Shiras::Test2::last_buffer_position	){
 		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
@@ -733,7 +733,7 @@ sub _load_test_buffer{
 		###InternalSwitchboarD					$#{$self->_get_test_buffer( $report_ref->{report} )} ], } );
 		pop @{$self->_get_test_buffer( $report_ref->{report} )};
 	}
-	
+
 	return 1;
 }
 
@@ -742,15 +742,15 @@ sub _really_report{
 	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_really_report',
 	###InternalSwitchboarD		message =>[ "Arrived at _really_report to report -$report_ref->{report}- with message:", $report_ref->{message} ], } );
-	
-	# Load the test buffer as called 
+
+	# Load the test buffer as called
 	if( $Log::Shiras::Test2::last_buffer_position ){
 		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 1,
 		###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_really_report',
 		###InternalSwitchboarD		message =>[ "Sending the message to the test buffer too!" ], } );
 		$self->_load_test_buffer( $report_ref );
 	}
-	
+
 	# Send the data to the reports
 	my $x = 0;
 	my 	$report_array_ref = $self->get_report( $report_ref->{report} );
@@ -941,28 +941,28 @@ Moose found in the western United States (of America).
 
 This is the class for message traffic control in the 'Log::Shiras' package.  For a
 general overview of the whole package see L<the top level documentation
-|Log::Shiras>.  Traffic is managed using name spaces.  For the purposes of logging this 
-package uses three types of name space with an additional wrapper.  The first name space 
-is the source code name space.  This name space is managed by putting labeled comment 
-tags in the code and then exposing them with a source code filter.  This is mostly used 
-when you want to have debug code available that does not impact your regular runs of the 
-code.  This space is managed by L<Log::Shiras::Unhide>.  The source code name space is a 
-flat list.  The next name space is the caller name space.  The caller name space is 
+|Log::Shiras>.  Traffic is managed using name spaces.  For the purposes of logging this
+package uses three types of name space with an additional wrapper.  The first name space
+is the source code name space.  This name space is managed by putting labeled comment
+tags in the code and then exposing them with a source code filter.  This is mostly used
+when you want to have debug code available that does not impact your regular runs of the
+code.  This space is managed by L<Log::Shiras::Unhide>.  The source code name space is a
+flat list.  The next name space is the caller name space.  The caller name space is
 assigned in the code with targeted embedded statements to the L<master_talk
-|/master_talk( $args_ref )> method.  Boilerplate for managing these calls can be found  
-in L<Log::Shiras::Telephone>.  If you wish to inject name_space modifications from the 
-calling script you can use the role L<Log::Shiras::LogSpace>.  The caller namespace can 
-be heirarchical and represented by a Hash of hashrefs.  The final name space is the 
-destination or L<report|/reports> namespace.  This namespace is flat but each position can contain 
-more than one actual report.  Any message to a specific report name is sent to all reports 
-assigned to that name.  Managing the traffic between the caller name space and the report 
-name space is done by setting allowed L<urgency|/logging_levels> levels in the 
+|/master_talk( $args_ref )> method.  Boilerplate for managing these calls can be found
+in L<Log::Shiras::Telephone>.  If you wish to inject name_space modifications from the
+calling script you can use the role L<Log::Shiras::LogSpace>.  The caller namespace can
+be heirarchical and represented by a Hash of hashrefs.  The final name space is the
+destination or L<report|/reports> namespace.  This namespace is flat but each position can contain
+more than one actual report.  Any message to a specific report name is sent to all reports
+assigned to that name.  Managing the traffic between the caller name space and the report
+name space is done by setting allowed L<urgency|/logging_levels> levels in the
 L<name space bounds|/name_space_bounds>., urgency levels, and report names.
 
-In order to stich all this together at run time this is a singleton class and so 
-'new' is the wrong way to get a new instance of this class.  The right way is to use the 
-method L<get_operator|/get_operator( %args )>. The upside of using a singleton is you 
-can write a caller (message source) with an intended urgency and destination name and not 
+In order to stich all this together at run time this is a singleton class and so
+'new' is the wrong way to get a new instance of this class.  The right way is to use the
+method L<get_operator|/get_operator( %args )>. The upside of using a singleton is you
+can write a caller (message source) with an intended urgency and destination name and not
 build the actual destination till run time.
 
 =head2 Initialization
@@ -982,14 +982,14 @@ implement the settings passed in %args merging them with any pre-existing settin
 Where pre-existing settings disagree with new settings the new settings take
 precedence.  So be careful!
 
-B<Accepts:> [%args|$args_ref|full/file/path.(json|yml)] %args are treated the same 
-as attributes passed to other class style calls to new.  The data can either be 
-passed as a fat comma list or a hashref.  If this method receives a string it will 
-try to treat it like a full file path to a JSON or YAML file with the equivalent 
+B<Accepts:> [%args|$args_ref|full/file/path.(json|yml)] %args are treated the same
+as attributes passed to other class style calls to new.  The data can either be
+passed as a fat comma list or a hashref.  If this method receives a string it will
+try to treat it like a full file path to a JSON or YAML file with the equivalent
 $args_ref stored.  See L<conf_file|/conf_file> to pass a file path and arguments.
 
 B<Returns:> an instance of the Log::Shiras::Switchboard class called an 'operator'.
-This operator can act on the switchboard to perform any of the methods including 
+This operator can act on the switchboard to perform any of the methods including
 any attribute access methods.
 
 =back
@@ -998,7 +998,7 @@ any attribute access methods.
 
 Data passed to L<get_operator|/get_operator( %args )> when creating an instance.  For
 modification of these attributes see the remaining L<Methods|/Methods>
-used to act on the operator.  B<DO NOT USE 'Log::Shiras::Switchboard-E<gt>new' to get 
+used to act on the operator.  B<DO NOT USE 'Log::Shiras::Switchboard-E<gt>new' to get
 a new class instance>
 
 =head3 name_space_bounds
@@ -1006,20 +1006,20 @@ a new class instance>
 =over
 
 B<Definition:> This attribute stores the boundaries set for the name-space management of
-communications (generally from L<Log::Shiras::Telephone>) message data sources. This 
-value ref defines where in the name-space, to which L<reports|/reports>, and at L<what 
-urgency level|/logging_levels> messages are allows to pass.  Name spaces are stored as 
-a L<hash of hashes|http://perldoc.perl.org/perldsc.html#HASHES-OF-HASHES> that goes as 
-deep as needed.  To send a message between a specific caller name-space and a named 
-'report' destination this hash ref tree must have the key 'UNBLOCK' at or below the 
-target name space in the hashref tree.  The UNBLOCK key must have as a value a hashref 
-with report names as keys and the minimum allowed L<pass level|/logging_levels> as the 
-value.  That(ose) report(s) then remain(s) open to communication farther out on the 
-caller name space branch until a new UNBLOCK key sets different permission level or 
-a 'BLOCK' key is implemented.  The difference between a BLOCK and UNBLOCK key is that 
-a BLOCK key value only needs to contain report keys (the key values are unimportant).  
-Any level assigned to the report name by a BLOCK key is ignored and all communication 
-at that point and further in the branch is cut off all for all deeper levels of the 
+communications (generally from L<Log::Shiras::Telephone>) message data sources. This
+value ref defines where in the name-space, to which L<reports|/reports>, and at L<what
+urgency level|/logging_levels> messages are allows to pass.  Name spaces are stored as
+a L<hash of hashes|http://perldoc.perl.org/perldsc.html#HASHES-OF-HASHES> that goes as
+deep as needed.  To send a message between a specific caller name-space and a named
+'report' destination this hash ref tree must have the key 'UNBLOCK' at or below the
+target name space in the hashref tree.  The UNBLOCK key must have as a value a hashref
+with report names as keys and the minimum allowed L<pass level|/logging_levels> as the
+value.  That(ose) report(s) then remain(s) open to communication farther out on the
+caller name space branch until a new UNBLOCK key sets different permission level or
+a 'BLOCK' key is implemented.  The difference between a BLOCK and UNBLOCK key is that
+a BLOCK key value only needs to contain report keys (the key values are unimportant).
+Any level assigned to the report name by a BLOCK key is ignored and all communication
+at that point and further in the branch is cut off all for all deeper levels of the
 name space branch for that report.  There are a couple of significant points for review;
 
 =over
@@ -1029,7 +1029,7 @@ B<*> UNBLOCK and BLOCK should not be used as branch of the telephone name-space 
 B<*> If a caller name-space is not listed here or a report name is not explicitly
 UNBLOCKed then the message is blocked by default.
 
-B<*> Even though 'log_file' is the default report it is not 'UNBLOCK'ed by default.  
+B<*> Even though 'log_file' is the default report it is not 'UNBLOCK'ed by default.
 It must be explicitly UNBLOCKed to be used.
 
 B<*> UNBLOCKing or BLOCKing of a report can occur independant of it's existance.
@@ -1041,17 +1041,17 @@ associated with the BLOCK key is evaluated second.  This means that the BLOCK
 command can negate a report UNBLOCKing level.
 
 B<*> Any name space on the same branch (but deeper) than an UNBLOCK command remains
-UNBLOCKed for the listed report urgency levels until a deeper UNBLOCK or BLOCK is 
+UNBLOCKed for the listed report urgency levels until a deeper UNBLOCK or BLOCK is
 registered for that report.
 
-B<*> When UNBLOCKing a report at a deeper level than an initial UNBLOCK setting 
+B<*> When UNBLOCKing a report at a deeper level than an initial UNBLOCK setting
 the new level can be set higher or lower than the initial setting.
 
-B<*> BLOCK commands are only valuable deeper than an initial UNBLOCK command.  The 
+B<*> BLOCK commands are only valuable deeper than an initial UNBLOCK command.  The
 Tree trunk starts out 'BLOCK'ed by default.
 
-B<*> All BLOCK commands completly block the report(s) named for that point and 
-deeper independant of the urgency value associated with report name key in 
+B<*> All BLOCK commands completly block the report(s) named for that point and
+deeper independant of the urgency value associated with report name key in
 the BLOCK hashref.
 
 B<*> The hash key whos hashref value contains an UNBLOCK hash key is the point in
@@ -1063,7 +1063,7 @@ B<Default> all caller name-spaces are blocked (no reporting)
 
 B<Range> The caller name-space is stored and searched as a hash of hashes.  No
 array refs will be correctly read as any part of the name-space definition.  At each
-level of the name-space the switchboard will also recognize the special keys 'UNBLOCK' 
+level of the name-space the switchboard will also recognize the special keys 'UNBLOCK'
 and 'BLOCK' I<in that order>.  As a consequence UNBLOCK and BLOCK are not supported as
 name-space elements.  Each UNBLOCK (or BLOCK) key should have a hash ref of L<report
 |/reports> name keys as it's value.  The hash ref of report name keys should contain
@@ -1090,10 +1090,10 @@ B<Example>
 		},
 	}
 
-B<Warning> All active name-space boundaries must coexist in the singleton.  There 
-is only one master name-space for the singleton.  New calls for object intances can 
-overwrite existing object instances name-space boundaries.  No cross instance name-space 
-protection is done. This requires conscious managment!  I<It is entirely possible to call 
+B<Warning> All active name-space boundaries must coexist in the singleton.  There
+is only one master name-space for the singleton.  New calls for object intances can
+overwrite existing object instances name-space boundaries.  No cross instance name-space
+protection is done. This requires conscious managment!  I<It is entirely possible to call
 for another operator in the same program space with overlapping name-space boundaries that
 changes reporting for a callers originally used in the context of the original operator.>
 
@@ -1122,11 +1122,11 @@ instances for that name.  The attribute expects a L<hash of arrays
 |http://perldoc.perl.org/perldsc.html#HASHES-OF-ARRAYS>.  Each hash key is the
 report name and the array contains the report instances associated with that name.  Each
 passed array object will be tested to see if it is an object that can( 'add_line' ).
-If not this code will try to coerce the passed reference at the array position into an 
+If not this code will try to coerce the passed reference at the array position into an
 object using L<MooseX::ShortCut::BuildInstance>.
 
 B<Default> no reports are active.  If a message is sent to a non-existant report
-name then nothing happens unless L<self reporting|Log::Shiras::Unhide> is fully enabled.  
+name then nothing happens unless L<self reporting|Log::Shiras::Unhide> is fully enabled.
 Then it is possible to collect various warning messages related to the failure of a
 message.
 
@@ -1202,19 +1202,19 @@ B<Definition:> Deletes all storeage (and use of) $report1 etc.
 
 =over
 
-B<Definition:> Each report name recognizes 12 different logging levels [0..11] 
+B<Definition:> Each report name recognizes 12 different logging levels [0..11]
 (L<They go to 11!
-|http://en.wikipedia.org/wiki/Up_to_eleven#Original_scene_from_This_Is_Spinal_Tap> :).  Each 
-position within the logging levels can be assigned a name that is not case sensitive.  
-Either the position integer or the name assigned to that position can be used to describe 
-the urgency 'level'.  Each message can be sent with name.  The urgency level of a message 
-L<can be defined|master_talk( $args_ref )> for each sent message.  If you do not wish to 
-use the default name for each logging position or you wish to name the logging positions 
-that are not named then use this attribute.  Not all of the elements need to be defined.  
-There can be gaps between defined levels but counting undefined positions there can never 
-be more than 12 total positions in the level array.  The priority or urgency is lowest 
-first to highest last on the list.  Where requests sent with an urgency at or above the 
-permissions barrier will pass.  Since there are default priority names already in place 
+|http://en.wikipedia.org/wiki/Up_to_eleven#Original_scene_from_This_Is_Spinal_Tap> :).  Each
+position within the logging levels can be assigned a name that is not case sensitive.
+Either the position integer or the name assigned to that position can be used to describe
+the urgency 'level'.  Each message can be sent with name.  The urgency level of a message
+L<can be defined|master_talk( $args_ref )> for each sent message.  If you do not wish to
+use the default name for each logging position or you wish to name the logging positions
+that are not named then use this attribute.  Not all of the elements need to be defined.
+There can be gaps between defined levels but counting undefined positions there can never
+be more than 12 total positions in the level array.  The priority or urgency is lowest
+first to highest last on the list.  Where requests sent with an urgency at or above the
+permissions barrier will pass.  Since there are default priority names already in place
 this attribute is a window dressing setting and not much more.
 
 B<Default> The default array of priority / urgency levels is;
@@ -1235,16 +1235,16 @@ B<Example>
 		) ],
 	}
 
-B<fatal> The Switchboard will L<confess|Carp/confess> for all messages sent with a 
-priority or urgency level that matches qr/fatal/i.  The switchboard will check for 
-permissions to pass the fatal message but will not take any other actions prior to 
-sending the 'message' with a confess stack and dying.  'fatal' can be set anywhere in 
-the custom priority list from lowest to highest but fatal is the only one that will die.  
-(priorities higher than fatal will not die) B<But>, if the message is blocked for the 
-message I<name-space, report, and level> then the code will NOT die.>  If 'fatal' is 
-the requested level from the caller but it is not on the (custom) list for the report 
-desination then the priority of the message drops to 0 and 0 position urgencies must 
-be accepted for the report to die. (even if the listed level at the 0 position is not 
+B<fatal> The Switchboard will L<confess|Carp/confess> for all messages sent with a
+priority or urgency level that matches qr/fatal/i.  The switchboard will check for
+permissions to pass the fatal message but will not take any other actions prior to
+sending the 'message' with a confess stack and dying.  'fatal' can be set anywhere in
+the custom priority list from lowest to highest but fatal is the only one that will die.
+(priorities higher than fatal will not die) B<But>, if the message is blocked for the
+message I<name-space, report, and level> then the code will NOT die.>  If 'fatal' is
+the requested level from the caller but it is not on the (custom) list for the report
+desination then the priority of the message drops to 0 and 0 position urgencies must
+be accepted for the report to die. (even if the listed level at the 0 position is not
 'fatal').
 
 =back
@@ -1296,7 +1296,7 @@ B<Definition:> Returns the full hashref of arrayrefs for all custom log levels
 =back
 
 =back
-		
+
 =head3 all_buffering
 
 =over
@@ -1310,9 +1310,9 @@ then a L<clear_buffer|/clear_buffer( $report_name )> command can be sent and all
 messages after the last flush will be discarded.  If buffering is turned off the
 messages are sent directly to the report for processing with no holding period.  This
 attribute accepts a hash ref where the keys are report names and the values empty arrayrefs
-You could theoretically pre-load your buffer here but it is not reccomended.  If a new 
-instance of this class is called with an 'all_buffering' arg sent then it will flush any 
-pre-existing buffers (even if they are duplicated in the new call) then delete them and 
+You could theoretically pre-load your buffer here but it is not reccomended.  If a new
+instance of this class is called with an 'all_buffering' arg sent then it will flush any
+pre-existing buffers (even if they are duplicated in the new call) then delete them and
 set the new passed list fresh.
 
 B<Default> All buffering is off
@@ -1331,7 +1331,7 @@ B<set_all_buffering( $hasref_of_arrayrefs )>
 
 =over
 
-B<Definition:> completely resets all buffers to $hasref_of_arrayrefs but flushes 
+B<Definition:> completely resets all buffers to $hasref_of_arrayrefs but flushes
 all the old buffers first
 
 =back
@@ -1361,9 +1361,9 @@ B<Definition:> Removes the buffer for the $report[s] (flushing them first)
 =over
 
 B<Definition:> It is possible to pass all the Attribute settings to L<get_operator
-|/get_operator( %args )> as a config file.  If you wish to mix your metaphores then 
-one of the attribute keys can be 'conf_file' with the value being the full file path 
-of a YAML or JSON file.  If you pass other attributes and conf_file then where there 
+|/get_operator( %args )> as a config file.  If you wish to mix your metaphores then
+one of the attribute keys can be 'conf_file' with the value being the full file path
+of a YAML or JSON file.  If you pass other attributes and conf_file then where there
 is conflict the other attributes overwrite the file settings.
 
 B<Default> nothing
@@ -1374,69 +1374,69 @@ B<Accepts:> a full file path to a config file with attribute settings
 
 =head2 Methods
 
-These are methods used to adjust outcomes for the activities in the switchboard or to 
-leverage information held by the switchboard.  
+These are methods used to adjust outcomes for the activities in the switchboard or to
+leverage information held by the switchboard.
 
 =head3 master_talk( $args_ref )
 
 =over
 
-B<Definition:> This is a way to directly call a report using the switchboard operator.  In a 
-real telephone situation this would be that cool handset that the telephone repairman brought 
-with him.  Like the Telephone repairman's phone it plugs in directly to the switchboard (or 
-in the repairmains case into a telephone line) and is a bit trickier to operate than absolutely 
-necessary.  For a nicer message sending interface see L<Log::Shiras::Telephone>.  When the 
+B<Definition:> This is a way to directly call a report using the switchboard operator.  In a
+real telephone situation this would be that cool handset that the telephone repairman brought
+with him.  Like the Telephone repairman's phone it plugs in directly to the switchboard (or
+in the repairmains case into a telephone line) and is a bit trickier to operate than absolutely
+necessary.  For a nicer message sending interface see L<Log::Shiras::Telephone>.  When the
 $args_ref message is received the switchboard will check the L<name_space_bounds
 |/name_space_bounds> permissions and then test;
 
-	$args_ref->{level} =~ /fatal/i 
-	
-If the message passes those two tests then it will attach metadata to to the $args_ref.  It 
-should be noted that the reaction to matching level to fatal is to confess (L<Carp>) each 
-element of the {message} ArrayRef.  Any message buffering is then handled or the message is 
-sent to the report name and each report in that name-space receives the $args_ref as the 
+	$args_ref->{level} =~ /fatal/i
+
+If the message passes those two tests then it will attach metadata to to the $args_ref.  It
+should be noted that the reaction to matching level to fatal is to confess (L<Carp>) each
+element of the {message} ArrayRef.  Any message buffering is then handled or the message is
+sent to the report name and each report in that name-space receives the $args_ref as the
 arguments to a call $report->add_line( $args_ref ).
 
 The metadata attached to the message is a follows
 
 	date_time => The date and time the message was sent in CLDR format of 'yyyy-MM-dd hh:mm:ss'
-	
+
 	package => The package name of the message source
-	
+
 	filename => The (full) file name of the message source
-	
+
 	line => The line number of the message source
 
 B<Returns:> The number of times the add_line call was made.  There are some special cases.
-	
+
 	-3 = The call was not allowed by name_space permissions set in the switchboard
 	-2 = The message was buffered rather than sent to a report
 	-1 = The message was blocked as risking deep recursion
 	 0 = The call had permissions but found no report implementations to connect with
 	 1(and greater) = This indicates how many report instances received the message
 
-B<Accepts:> The passed args must be a HashRef and contain the following elements (any 
+B<Accepts:> The passed args must be a HashRef and contain the following elements (any
 others will be ignored by the switchboard but not stripped).
 
 =over
 
 B<name_space> the value is the caller name_space as used by L<name_space_bounds|/name_space_bounds>
 
-B<level> value is the urgency level of the message sent.  It can either be an integer in the 
+B<level> value is the urgency level of the message sent.  It can either be an integer in the
 set [0..11] or one of the L<defined logging level strings|/logging_levels>.
 
 B<report> the value is the L<report|/reports> name (destination) for the message ref
 
-B<message> the message key must have a value that is an array_ref.  It is assumed that 
-content can be parsed into somthing else at the report level including any ArrayRef 
+B<message> the message key must have a value that is an array_ref.  It is assumed that
+content can be parsed into somthing else at the report level including any ArrayRef
 sub-elements that may be Objects or hashrefs.
 
-B<carp_stack> if this key is passed and set to a true value then L<Carp> - longmess will 
-be run on the message and the results will be split on the newline and pushed onto the end 
+B<carp_stack> if this key is passed and set to a true value then L<Carp> - longmess will
+be run on the message and the results will be split on the newline and pushed onto the end
 of the 'message' array_ref.
 
-B<source_sub> this key is generally handled in the background by Log::Shiras but if you 
-write a new caller subroutine to lay over 'master_talk' then providing that name to this 
+B<source_sub> this key is generally handled in the background by Log::Shiras but if you
+write a new caller subroutine to lay over 'master_talk' then providing that name to this
 key will make the metada added to the message stop at the correct caller level.
 
 =over
@@ -1449,16 +1449,16 @@ B<example>
 		report => 'log_file',
 		message =>[ 'Dont ignore these words' ],
 	}
-	
+
 =back
 
-B<carp_stack> [optional] This is a simple passed boolean value that will trigger a traditional 
-L<Carp> longmess stack to be split by /\n\s*/ and then pushed on the end of the message array ref.  
+B<carp_stack> [optional] This is a simple passed boolean value that will trigger a traditional
+L<Carp> longmess stack to be split by /\n\s*/ and then pushed on the end of the message array ref.
 Before the message is stored this key will be deleted whether it was positive or negative.
 
 B<source_sub> [really optional] This is rarely used unless you are writing a replacement for
-L<Log::Shiras::Telephone>.  If you are writing a replacement then a full method space string is 
-passed here.  This will be used to travel the L<caller|http://perldoc.perl.org/functions/caller.html> 
+L<Log::Shiras::Telephone>.  If you are writing a replacement then a full method space string is
+passed here.  This will be used to travel the L<caller|http://perldoc.perl.org/functions/caller.html>
 stack to find where the message line originated.  The equivalent for Log::Shiras::Telephone is;
 
 =over
@@ -1466,7 +1466,7 @@ stack to find where the message line originated.  The equivalent for Log::Shiras
 B<example>
 
     { source_sub => 'Log::Shiras::Telephone::talk' }
-	
+
 =back
 
 =back
@@ -1477,8 +1477,8 @@ B<example>
 
 =over
 
-B<Definition:> This will L<graft|Data::Walk::Graft/graft_data( %argsE<verbar>$arg_ref )> 
-more name-space boundaries onto the existing name-space.  I<The passed ref will be treated 
+B<Definition:> This will L<graft|Data::Walk::Graft/graft_data( %argsE<verbar>$arg_ref )>
+more name-space boundaries onto the existing name-space.  I<The passed ref will be treated
 as the 'scion_ref' using Data::Walk::Graft.>
 
 B<Accepts:> a data_ref (must start at the root of the main ref) of data to graft to the main
@@ -1496,7 +1496,7 @@ B<Definition:> This will L<prune|Data::Walk::Prune/prune_data( %args )> the name
 L<boundaries|/name_space_bounds> using the passed name-space ref. I<The passed ref will
 be treated as the 'slice_ref' using Data::Walk::Prune.>
 
-B<Accepts:> a data_ref (must start at the root of the main ref) of data used to prune the 
+B<Accepts:> a data_ref (must start at the root of the main ref) of data used to prune the
 main name_space_bounds ref
 
 B<Returns:> The updated name-space data ref
@@ -1552,8 +1552,8 @@ complete the buffer flush.
 
 =over
 
-B<Definition:> This will start L<buffering|/buffering> for the $report_name.  If the buffering is 
-already implemented then nothing new happens.  No equivalent report or name_space_bounds 
+B<Definition:> This will start L<buffering|/buffering> for the $report_name.  If the buffering is
+already implemented then nothing new happens.  No equivalent report or name_space_bounds
 are required to turn buffering on!
 
 B<Accepts:>  a $report_name string
@@ -1743,7 +1743,7 @@ This is pretty long so I put it at the end
 	# 11: 	:(	Current action for report -log_file- is: report ):
 	# 12: | level - 2      | name_space - Log::Shiras::Switchboard::get_operator
 	# 13: | line  - 0211   | file_name  - ..\lib\Log\Shiras\Switchboard.pm
-	# 14: 	:(	Switchboard finished updating the following arguments: 
+	# 14: 	:(	Switchboard finished updating the following arguments:
 	# 15: 		reports
 	# 16: 		name_space_bounds
 	# 17: 		all_buffering ):
@@ -1783,7 +1783,7 @@ This is pretty long so I put it at the end
 	# 51: message to 'run' at 'warn' level was approved at log_shiras_switchboard.pl line 104.
 	# 52: ...but found -0- reporting destinations (None were set up) at log_shiras_switchboard.pl line 105.
 	#######################################################################################
-	
+
 =head2 SYNOPSIS EXPLANATION
 
 =over
@@ -1792,32 +1792,32 @@ This is pretty long so I put it at the end
 	..
 	###LogSD warn "lets get ready to rumble...";
 
-Log::Shiras::Unhide strips ###MyCoolTag tags - see L<Log::Shiras::Unhide> for more information.  
-It represents the only driver between the three example outputs (All run from the same basic 
-script).  For instance when the :debug tag is passed to Unhide then ###LogSD is stripped.  
+Log::Shiras::Unhide strips ###MyCoolTag tags - see L<Log::Shiras::Unhide> for more information.
+It represents the only driver between the three example outputs (All run from the same basic
+script).  For instance when the :debug tag is passed to Unhide then ###LogSD is stripped.
 When :InternalSwitchboarD is passed it strips ###InternalSwitchboarD.
 
-Each of the remaining functions is documented above but the difference between the three 
-outputs are based on what is unhid.  In all cases 'Hello World [1..5]' is sent to master_talk 
-in the switchboard.  All of the calls are valid syntax but not all calls have the necessary 
+Each of the remaining functions is documented above but the difference between the three
+outputs are based on what is unhid.  In all cases 'Hello World [1..5]' is sent to master_talk
+in the switchboard.  All of the calls are valid syntax but not all calls have the necessary
 target or urgency to be completed.
 
-In the first output it is obvious that only 'Hello World 2' and 'Hello World 4' have the 
-necessary permissions to be completed.  Each one is sent to a different report object so it 
+In the first output it is obvious that only 'Hello World 2' and 'Hello World 4' have the
+necessary permissions to be completed.  Each one is sent to a different report object so it
 will be obvious based on the output what path it took to be printed.
 
-In the second output only the ###LogSD tags are removed and so comments associated with the 
-actions are exposed.  In this case these comments only exist in the script space so 
-warning messages are mostly the only thing exposed that is visible.  Since ~::Unhide is a 
-source filter it also provides a warning from the class showing that a source filter is 
-turned on and what is being scrubbed.  This includes scrubbing through the script and 
+In the second output only the ###LogSD tags are removed and so comments associated with the
+actions are exposed.  In this case these comments only exist in the script space so
+warning messages are mostly the only thing exposed that is visible.  Since ~::Unhide is a
+source filter it also provides a warning from the class showing that a source filter is
+turned on and what is being scrubbed.  This includes scrubbing through the script and
 all used modules.  (But not 'with' roles!).
 
-In the final output the ###InternalSwitchboarD tags are also stripped.  Since there 
-are a lot of these in L<Log::Shiras::Switchboard> there is a number of things available to 
-see from that class.  However the operator only has released log_file messages for the 
-~::get_operator and ~::_buffer_decision name spaces.  A new class is also exposed that 
-can take advantage of message metadata and uses it to show where the message came from 
+In the final output the ###InternalSwitchboarD tags are also stripped.  Since there
+are a lot of these in L<Log::Shiras::Switchboard> there is a number of things available to
+see from that class.  However the operator only has released log_file messages for the
+~::get_operator and ~::_buffer_decision name spaces.  A new class is also exposed that
+can take advantage of message metadata and uses it to show where the message came from
 as well has what urgency it was sent with.
 
 =back
@@ -1834,7 +1834,7 @@ L<github Log-Shiras/issues|https://github.com/jandrew/Log-Shiras/issues>
 
 =over
 
-B<1.> Add method to pull a full caller($x) stack and add it to message 
+B<1.> Add method to pull a full caller($x) stack and add it to message
 metadata.  Probably should be triggered in the master_talk call args.
 
 B<2.> Investigate the possibility of an ONLY keyword in addition to
