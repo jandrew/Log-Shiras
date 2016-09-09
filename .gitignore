@@ -1,0 +1,6 @@
+#gitignore file
+.build/
+Log-Shiras*/
+*.tar.gz
+DevelopmentNotes.txt
+Makefile.old
