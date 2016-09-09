@@ -7,11 +7,15 @@ Uses the change tracking convention
 	* Place holder
 
 NOTE: This software is designated as beta quality until this notice is removed.  
-    Intitial CPAN release plus one year is probably the minimum before a v0.0 release.
+    Intitial CPAN release plus one year is probably the minimum before a v1.0 release.
 
 {{$NEXT}}
 
 	* Another cool change
+
+v0.31.0   2016-09-09 14:35:20-07:00 America/Los_Angeles
+
+	! Added requirement for Filter::Util::Call to test
 
 v0.30.0   2016-09-09 14:20:26-07:00 America/Los_Angeles
 
