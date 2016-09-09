@@ -1,5 +1,5 @@
 package Log::Shiras::TapPrint;
-use version; our $VERSION = version->declare("v0.35.0");
+use version; our $VERSION = version->declare("v0.37.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTaPPrinT );
 ###InternalTaPPrinT	warn "You uncovered internal logging statements for Log::Shiras::TapPrint-$VERSION" if !$ENV{hide_warn};
