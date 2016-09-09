@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.38.0");
+use version 0.77; our $VERSION = version->declare("v0.38.2");
 use utf8;
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__
@@ -106,7 +106,7 @@ name-space that we apply to specific files (modules or scripts).  The file name-
 this package is treated as flat (no heirarchy) and is managed using L<source code filters
 |Log::Shiras::Unhide>.  File name-space filtering is therefore done at compile time with
 no run time changes available.  The second name-space is a run time caller name-space that
-can be adjusted as the program operates.  Run time name-space applied to the source of the
+can be adjusted as the program operates.  Run time name-space is applied to the source of the
 output.  Run time name-space is hierarchical and each output source can be assigned a level
 of urgency.  This allows run time name-space filtering to be applied lower in the heirarchy
 and remain in force out in the branch.  Permissions for run time name-space can also change
@@ -164,11 +164,11 @@ file is not empty.  It will also manage (or at least warn) on header drift.
 =head2 Custom formatting
 
 I wanted to be able to use method calls and code references when formatting
-'Report' output.  The
-L<Log::Shiras::Report::ShirasFormat
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report/ShirasFormat.pm>
-Role for the 'Report' class does just that.  While the API isn't as mature as
-Log4perl's 'PatternLayout' it does support full perl sprintf formatting.
+'Report' output.  The L<Log::Shiras::Report::MetaMessage> Role for the 'Report' 
+class does just that.   This varies from Log::Log4perl's 'PatternLayout' as it 
+operates on an array ref or hashref rather than a string.  There may be a string 
+formatter in the future since I half wrote one but I talked myself out of it in 
+favor of an array ref manipulation scheme.
 
 =head2 L<Moose|Moose::Manual>
 
@@ -185,7 +185,8 @@ later.  See also L<Log::Dispatch>.
 
 Excessive outputs for troubleshooting will overburden code.  Having a source filter
 will allow the code to remain in source control (no retyping of print statements)
-while still not burdening run time operations generally.
+while still not burdening run time operations generally.  See also 
+L<Log::Log4perl::Resurrector>
 
 =head2  Custom urgency levels
 
@@ -298,6 +299,10 @@ See individual modules
 =item L<Log::Dispatch>
 
 =item L<Log::Report>
+
+=item L<Smart::Comments>
+
+=item L<Log::Log4perl::Resurrector>
 
 =back
 
