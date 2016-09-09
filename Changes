@@ -13,6 +13,10 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.37.13  2016-09-10 07:52:30-07:00 America/Los_Angeles
+
+	! Block unicore/* scrubbing in ~::Unhide
+
 v0.37.11  2016-09-10 07:40:18-07:00 America/Los_Angeles
 
 	! Fix .travis.yml that I just broke

@@ -1,5 +1,5 @@
 package Log::Shiras::Unhide;
-use version; our $VERSION = version->declare("v0.37.11");
+use version; our $VERSION = version->declare("v0.37.13");
 use utf8;
 use 5.010;
 use strict;
@@ -33,8 +33,9 @@ my	$my_unhide_skip_check = qr/(
 		^PerlIO|			^POSIX|				^re\.pm|			^SelfLoader|
 		^SetDual|			^Smart|				^Sub|				^Test2|
 		^Tie|				^Text|				^Time.Local|		^Try|
-		^Type|				^UNIVERSAL|			^utf8|				^Variable|
-		^Win32|				^XML|				^YAML
+		^Type|				^unicore|			^UNIVERSAL|			^utf8|
+		^Variable|			^Win32|				^XML|				
+		^YAML				
 	)/x;
 my	$run_once_hash;
 our	$strip_match;

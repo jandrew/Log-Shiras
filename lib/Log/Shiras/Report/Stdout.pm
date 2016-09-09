@@ -1,5 +1,5 @@
 package Log::Shiras::Report::Stdout;
-use version; our $VERSION = version->declare("v0.37.11");
+use version; our $VERSION = version->declare("v0.37.13");
 use Data::Dumper;
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
