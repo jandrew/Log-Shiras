@@ -1,104 +1,22 @@
 package Log::Shiras::Report;
-use version 0.77; our $VERSION = qv("v0.20.4");
-
+use version; our $VERSION = version->declare("v0.29_1");
+#~ use lib '../../';
+#~ use Log::Shiras::Unhide qw( :InternalReporT );
+###InternalReporT	warn "You uncovered internal logging statements for Log::Shiras::Report-$VERSION" if !$ENV{hide_warn};
+###InternalReporT	use Log::Shiras::Switchboard;
+###InternalReporT	my	$switchboard = Log::Shiras::Switchboard->instance;
+use Carp qw( confess cluck );
+use MooseX::Types::Moose qw( ArrayRef HashRef );
 use Moose::Role;
-use Data::Dumper;
-use Carp qw( cluck );
-use Types::Standard qw(
-        Bool		ArrayRef		HashRef
-		Str			Object			is_HashRef
-		is_ArrayRef
-    );
-###LogSSR use Log::Shiras::UnhideSelfReport;
-###LogSSR use Log::Shiras::Telephone;
-	
-use Text::CSV_XS;
-my $csv = Text::CSV_XS->new ({ binary => 1, auto_diag => 1, eol => "\n" });
+requires 'add_line';
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
-has to_stdout =>(
-	isa 	=> Bool,
-	default	=> 0,
-	writer	=> 'set_to_stdout',
-	reader	=> 'send_to_stdout',
-);
+
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
 
-sub add_line {
-    my  ( $self, $first_ref, @list ) = @_;
-	my  $message_ref;
-	###LogSSR	my	$phone = Log::Shiras::Telephone->new(
-	###LogSSR					name_space 	=> $self->get_log_space .  '::add_line', );
-	###LogSSR		$phone->talk( level => 'info', message =>[
-	###LogSSR			"Arrived at add_line with:", $first_ref, @list ] );
-	if( is_HashRef( $first_ref ) ){
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"Use the hashref as is:", $first_ref, ] );
-		#~ print "The message is a hashref:" . Dumper( $first_ref );
-		if( exists $first_ref->{message} and
-			(!is_ArrayRef( $first_ref->{message} ) or scalar( @{$first_ref->{message}} ) == 1 ) ){
-				#~ print "Identified a string where I want an array\n";
-			if( $csv->parse( !is_ArrayRef( $first_ref->{message} ) ? $first_ref->{message} : $first_ref->{message}->[0] ) ){
-				$first_ref->{message} = [ $csv->fields ];
-				###LogSSR	$phone->talk( level => 'info', message =>[
-				###LogSSR		"Converting the message string to an array:", $arg_ref->{headers} ] );
-				#~ print "Fixed the hash:" . Dumper( $first_ref );
-			}else{
-				###LogSSR	$phone->talk( level => 'warn', message =>[
-				###LogSSR		"unable to convert the header string because: " . $csv->error_diag() ] );
-				#~ confess "unable to convert the header string because: " . $csv->error_diag();
-			}
-		}
-		$message_ref = $first_ref;
-	}elsif( is_ArrayRef( $first_ref ) ){
-		#~ print "The message is an arrayref:" . Dumper( $first_ref );
-		$message_ref->{message} = $first_ref;
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"Adjust the first arrayref to:", $message_ref, ] );
-	}elsif( is_Str( $first_ref ) ){
-		#~ print "The message is a string:" . Dumper( $first_ref );
-		if( $csv->parse( $first_ref ) ){
-			$message_ref->{message} = [ $csv->fields ];
-			###LogSSR	$phone->talk( level => 'info', message =>[
-			###LogSSR		"Converting the string to an array:", $arg_ref->{headers} ] );
-		}else{
-			###LogSSR	$phone->talk( level => 'warn', message =>[
-			###LogSSR		"unable to convert the header string because: " . $csv->error_diag() ] );
-			#~ confess "unable to convert the header string because: " . $csv->error_diag();
-			$message_ref->{message} = [ $first_ref ];
-		}
-	}
-	push @{$message_ref->{message}}, @list if @list;
-	#~ confess "Loading message ref:", Dumper( $message_ref );
-	###LogSSR		$phone->talk( level => 'info', message =>[
-	###LogSSR			"Final message ref with added list:", $message_ref, ] );
-	my  $line_ref;
-	if( $self->can( '_use_formatter' ) ){
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"Sending traffic to the formatter:", $message_ref, ] );
-		$line_ref = $self->_use_formatter( $message_ref );
-	}else{
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"Using the straight up message list", $message_ref->{message}, ] );
-		$line_ref = $message_ref->{message};
-	}
-		
-	###LogSSR		$phone->talk( level => 'info', message =>[
-	###LogSSR			"Acting on the message: $line", ] );
-	if( $self->send_to_stdout ){
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"The message is redirected to STDOUT:", $line_ref, ] );
-		
-		$csv->print( *STDOUT, $line_ref );
-	}elsif( $self->can( '_load_appender' ) ){
-		###LogSSR		$phone->talk( level => 'info', message =>[
-		###LogSSR			"Sending the message to the active appender:", $line_ref, ] );
-        $self->_load_appender( $line_ref );
-    }
-    return $line_ref;
-}
+
 
 #########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
 	
@@ -106,7 +24,41 @@ sub add_line {
 
 #########1 Private Methods    3#########4#########5#########6#########7#########8#########9
 
-
+around add_line => sub{
+		my( $_add_line, $self, $message_ref ) = @_;
+		###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 1,
+		###InternalReporT		name_space => 'Log::Shiras::Report::add_line',
+		###InternalReporT		message =>[ 'Scrubbing the message ref:',  $message_ref ], } );
+		
+		# Scrub the input
+		if( !is_HashRef( $message_ref ) ){
+			confess "Expected the message to be passed as a hashref";
+		}elsif( !exists $message_ref->{message} ){
+			cluck "Passing an empty message to the report";
+			$message_ref->{message} = [];
+			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 3,
+			###InternalReporT		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+			###InternalReporT		message =>[ 'Message ref has no message:', $message_ref ], } );
+		}elsif( !is_ArrayRef( $message_ref->{message} ) ){
+			confess "The passed 'message' key value is not an array ref";
+		}
+		
+		# Check for a manage_message add on
+		if( $self->can( 'manage_message' ) ){
+			$message_ref = $self->manage_message( $message_ref );
+			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 3,
+			###InternalReporT		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+			###InternalReporT		message =>[ 'Updated the message to:', $message_ref->{message} ], } );
+		}
+		
+		# Implement the method
+		my $times = $self->$_add_line( $message_ref );
+		###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 2,
+		###InternalReporT		name_space => 'Log::Shiras::Report::add_line',
+		###InternalReporT		message =>[ 'add_line wrap finished', $times, $message_ref ], } );
+		return $times;
+	};
+	
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9
 
@@ -123,11 +75,89 @@ __END__
 Log::Shiras::Report - Report Role (Interface) for Log::Shiras
 
 =head1 SYNOPSIS
+
+	use Modern::Perl;
+	use Log::Shiras::Switchboard;
+	use Log::Shiras::Report;
+	use Log::Shiras::Report::CSVFile;
+	my	$operator = Log::Shiras::Switchboard->get_operator(
+			name_space_bounds =>{
+				UNBLOCK =>{
+					to_file => 'info',# for info and more urgent messages
+				},
+			},
+			reports =>{
+				to_file =>[{
+					superclasses =>[ 'Log::Shiras::Report::CSVFile' ],
+					add_roles_in_sequence =>[ 
+						'Log::Shiras::Report',
+						'Log::Shiras::Report::MetaMessage',
+					],# Effectivly an early class type check
+					file => 'test.csv',
+				}],
+			}
+		);
     
 =head1 DESCRIPTION
 
-Documenation not written yet
+This is a simple interface that ensures the report object has an 'add_line' method.  It also 
+scrubs the input to 'add_line' method to ensure the message is a hashref with the key message.  
+Finally, it calls a method 'manage_message' if it has been composed into the larger class.  
+For an example see L<Log::Shiras::Report::MetaMessage>.  If you wish to build your own report 
+object it just has to have an add_line method.  To use the report it is registered to the 
+switchboard using L<Log::Shiras::Switchboard/reports>  For an example of a simple report see 
+L<Log::Shiras::Report::Stdout>  For an example of a complex report see 
+L<Log::Shiras::Report::CSVFile>  Upon registration the reports will receive their messages from 
+L<Log::Shiras::Switchboard/master_talk( $args_ref )>.
+
+=head1 SUPPORT
+
+=over
+
+L<Log-Shiras/issues|https://github.com/jandrew/Log-Shiras/issues>
+
+=back
+
+=head1 TODO
+
+=over
+
+B<1.> Nothing L<currently|/SUPPORT>
+
+=back
+
+=head1 AUTHOR
+
+=over
+
+=item Jed Lund
+
+=item jandrew@cpan.org
+
+=back
+
+=head1 COPYRIGHT
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=head1 DEPENDENCIES
+
+=over
+
+L<version>
+
+L<Moose::Role> - requires (add_line)
+
+L<MooseX::Types::Moose>
+
+L<Carp> - confess cluck
+
+=back
 
 =cut
 
-#################### main pod documentation end ###################
+#########1#########2 main pod documentation end  5#########6#########7#########8#########9

@@ -1,0 +1,23 @@
+Revision history for {{$dist->name}}
+
+Uses the change tracking convention
+	+ New feature.
+	- Removed/deprecated feature.
+	! Bug fix.
+	* Place holder
+
+NOTE: This software is designated as beta quality until this notice is removed.  
+    Intitial CPAN release plus one year is probably the minimum before a v0.0 release.
+
+{{$NEXT}}
+
+	* Another cool change
+
+v0.29_1   2016-09-09 14:03:12-07:00 America/Los_Angeles (TRIAL RELEASE)
+
+	+ The goal is to create an initial CPAN release here
+	+ This includes a substantial rework of the Unhide implementation
+	+ Added line numbers to TapPrint and TapWarn namespace generation to allow for by-line control
+	+ Substantially reworked the CSVFile report to consume arrayrefs and hashrefs rather than print lines
+	+ Substantially reworked ShirasFormat Type to be an element modification class Log::Shiras::Report::MetaMethod
+		I might take the ShirasFormat out altogether since it was too tricky for it's own good

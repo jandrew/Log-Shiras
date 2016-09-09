@@ -1,6 +1,6 @@
 package Log::Shiras;
-use version; our $VERSION = version->declare("v0.27_1");
-
+use version 0.77; our $VERSION = version->declare("v0.29_1");
+use utf8;
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__
 
@@ -8,300 +8,158 @@ __END__
 
 Log::Shiras - A Moose based logging and reporting tool
 
+=begin html
+
+<a href="https://www.perl.org">
+	<img src="https://img.shields.io/badge/perl-5.10+-brightgreen.svg" alt="perl version">
+</a>
+
+<a href="https://travis-ci.org/jandrew/Log-Shiras">
+	<img alt="Build Status" src="https://travis-ci.org/jandrew/Log-Shiras.png?branch=master" alt='Travis Build'/>
+</a>
+
+<a href='https://coveralls.io/github/jandrew/Log-Shiras?branch=master'>
+	<img src='https://coveralls.io/repos/github/jandrew/Log-Shiras/badge.svg?branch=master' alt='Coverage Status' />
+</a>
+
+<a href='https://github.com/jandrew/Log-Shiras'>
+	<img src="https://img.shields.io/github/tag/jandrew/Log-Shiras.svg?label=github version" alt="github version"/>
+</a>
+
+<a href="https://metacpan.org/pod/Log::Shiras">
+	<img src="https://badge.fury.io/pl/Log-Shiras.svg?label=cpan version" alt="CPAN version" height="20">
+</a>
+
+<a href='http://cpants.cpanauthors.org/dist/Log-Shiras'>
+	<img src='http://cpants.cpanauthors.org/dist/Log-Shiras.png' alt='kwalitee' height="20"/>
+</a>
+
+=end html
+
 =head1 SYNOPSIS
     
 	#!perl
 	use Modern::Perl;
+	use lib 'lib', '../lib',;
+	use Log::Shiras::Unhide qw( :debug);#
 	use Log::Shiras::Switchboard;
-	my $operator = get_operator(
-		{# Can be replaced with a config file
-			reports => {
-				log_file => [
-					{
-						roles => [
-						   "Log::Shiras::Report::ShirasFormat",
-						   "Log::Shiras::Report::TieFile"
-						],
-						format_string => "%{date_time}P(m=>'ymd')s," .
-							"%{filename}Ps,%{inside_sub}Ps,%{line}Ps,%s,%s,%s",
-						filename => "test.csv",
-						superclasses => [
-						   "Log::Shiras::Report"
-						],
-						header => "Date,File,Subroutine,Line,Data1,Data2,Data3",
-						package => "Log::File::Shiras"
-					}
-				],
-				phone_book => [
-					{
-						roles => [
-						   "Log::Shiras::Report::ShirasFormat",
-						   "Log::Shiras::Report::TieFile"
-						],
-						format_string => "%s,%s,%s",
-						filename => "phone.csv",
-						superclasses => [
-						   "Log::Shiras::Report"
-						],
-						header => "Name,Area_Code,Number",
-						package => "Phone::Report"
-					},
-					{
-						roles => [
-						   "Log::Shiras::Report::ShirasFormat",
-						],
-						format_string => "Loading -%3\$s- in the phone book for -%1\$s-",
-						superclasses => [
-						   "Log::Shiras::Report"
-						],
-						package => "Phone::Log",
-						to_stdout => 1
-					}
-				]
-			},
-			name_space_bounds => {
-				main => {
-					UNBLOCK => {
-						log_file => "warn"
-					},
-					test_sub => {
-						UNBLOCK => {
-							log_file => "debug"
-						}
-					}
-				},
-				Special =>{
-					Name =>{
-						Space =>{
-							UNBLOCK => {
-								killer => "fatal"
-							}
-						}
-					}
-				},
-				Activity => {
-					call_someone => {
-						UNBLOCK => {
-							log_file => "trace",
-							phone_book => "eleven"
-						}
-					}
-				}
-			},
-			buffering => {
-				log_file => 1
-			}
-		}
-	);
-	my $telephone = get_telephone;
-		$telephone->talk( level => 'debug', report => 'log_file', 
-			message =>[ qw( humpty dumpty sat on a wall ) ] 
-		);
-		$telephone->talk( level => 'warn', report => 'log_file', 
-			message =>[ qw( humpty dumpty had a great fall ) ] 
-		);
-		$operator->send_buffer_to_output( 'log_file' );
-		$telephone->talk( message =>['Dont', 'Save', 'This'] );
-		$operator->clear_buffer( 'log_file' );
-		test_sub( 'Scooby', 'Dooby', 'Do' );
-		$telephone->talk( message =>['and', 'Scrappy', 'too!'] );
-		Activity->call_someone( 'Jenny', '', '867-5309' );
-		$operator->send_buffer_to_output( 'log_file' );
-	my $phone = get_telephone( 'Special::Name::Space' );
-		$phone->talk( message => "Not done yet!", level => 'warn', report => 'killer' );
-		$phone->talk( message => "The code is done!", level => 'fatal', report => 'killer' );
-		
-	sub test_sub{
-		my @message = @_;
-		my $phone = get_telephone;
-		$phone->talk( level => 'debug', report => 'log_file', message =>[ @message ] );
+	use Log::Shiras::Telephone;
+	use Log::Shiras::Report::Stdout;
+	$| = 1;
+
+	sub shout_at_me{
+		my $telephone = Log::Shiras::Telephone->new( report => 'run' );
+		$telephone->talk( carp_stack => 1, level => 'info', message =>[ @_ ] );
 	}
 
-	package Activity;
-	use Log::Shiras::Switchboard;
-
-	sub call_someone{
-		shift;
-		my $phone = get_telephone;
-		my $output;
-		$output .= $phone->talk( report => 'phone_book', message => [ @_ ], );
-		$output .= $phone->talk( 'calling', @_[0, 2] );
-		return $output;
-	}
-	1;
+	###LogSD warn "lets get ready to rumble...";
+	my $operator = Log::Shiras::Switchboard->get_operator(
+			name_space_bounds =>{
+				main =>{
+					UNBLOCK =>{
+						# UNBLOCKing the run reports (destinations)
+						# 	at the 'main' caller name_space and deeper
+						run	=> 'trace',
+					},
+				},
+			},
+			reports =>{
+				run =>[ Log::Shiras::Report::Stdout->new, ],
+			},
+		);
+	###LogSD warn "Getting a Telephone";
+	my $telephone = Log::Shiras::Telephone->new( report => 'run' );# or just '->new'
+	$telephone->talk( message => 'Hello World 1' );
+	###LogSD warn "message was sent to the report 'run' without sufficient permissions";
+	$telephone->talk( level => 'info', message => 'Hello World 2' );
+	###LogSD warn "message sent with sufficient permissions";
+	shout_at_me( 'Hello World 3' );
         
 	#####################################################################################
 	#	Synopsis screen output
-	# 01:Loading -867-5309- in the phone book for -Jenny-
-	# 02:The code is done! at ../lib/Log/Shiras/Switchboard.pm line 498, <$fh> line 42.
-	# 03-04:(Carp stack)
-	#
-	#	Synopsis output in phone.csv
-	# 01:Name,Area_Code,Number
-	# 02:Jenny,,867-5309
-	#
-	#	Synopsis output in test.csv
-	# 01:Date,File,Subroutine,Line,Data1,Data2,Data3
-	# 02:DD/MM/YYYY,t\Log-Shiras-example.pl,main,69,humpty,dumpty,had
-	# 03:DD/MM/YYYY,t\Log-Shiras-example.pl,main::test_sub,84,Scooby,Dooby,Do
-	# 04:DD/MM/YYYY,t\Log-Shiras-example.pl,main,77,and,Scrappy,too!
-	# 05:DD/MM/YYYY,t\Log-Shiras-example.pl,Activity::call_someone,95,calling,Jenny,867-5309
+	# 01: Using Log::Shiras::Unhide-v0.29_1 strip_match string: (LogSD) at ../lib/Log/Shiras/Unhide.pm line 87.
+	# 02: lets get ready to rumble... at log_shiras.pl line 15.
+	# 03: Getting a Telephone at log_shiras.pl line 30.
+	# 04: message was sent to the report 'run' without sufficient permissions at log_shiras.pl line 33.
+	# 05: | level - info   | name_space - main
+	# 06: | line  - 0034   | file_name  - log_shiras.pl
+	# 07: 	:(	Hello World 2 ):
+	# 08: message sent with sufficient permissions at log_shiras.pl line 35.
+	# 09: | level - info   | name_space - main::shout_at_me
+	# 10: | line  - 0012   | file_name  - log_shiras.pl
+	# 11: 	:(	Hello World 3
+	# 12: 		 at ..\lib\Log-Shiras\lib\Log\Shiras\Telephone.pm line 148.
+	# 13: 		Log::Shiras::Telephone::talk(Log::Shiras::Telephone=HASH(0x144cc18), "carp_stack", 1, "level", "info", "message", ARRAY(0xa14cd8)) called at log_shiras.pl line 12
+	# 14: 		main::shout_at_me("Hello World 3") called at log_shiras.pl line 36 ):
 	#####################################################################################
-
-=head2 SYNOPSIS EXPLANATION
-
-=head3 L<my	$operator = get_operator( %args )|/my $operator = get_operator(>
-
-This uses the exported method to get an instance of the 
-L<Log::Shiras::Switchboard|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm> 
-class and set the initial switchboard settings.
-
-=head3 L<reports =E<gt>{ %args }|/reports =E<gt> {>
-
-This is where the reports are defined for the switchboard using the 
-L<Log::Shiras::Report|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report.pm>
-class and the instance builder L<MooseX::ShortCut::BuildInstance>.
-
-=head3 L<name_space_bounds =E<gt>{ %args }|/name_space_bounds =E<gt> {>
-
-This is where the name-space bounds are defined.  Each UNBLOCK section can unblock many 
-reports to a given urgency level.  Different levels of urgency for each report can be 
-definied for each name-space level.
-
-=head3 L<buffering =E<gt>{ %args }|/buffering =E<gt> {>
-
-This is where you turn on (or off) buffering for each report name.
-
-=head3 L<my $telephone = get_telephone|/my  $telephone = get_telephone;>
-
-This uses the exported method to get an instance of the
-L<Log::Shiras::Telephone|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm> 
-class in order to send future output.  With no definition the name-space is the 
-caller stack namespace with 'main' as the base when in the primary script.
-
-=head3 L<my $telephone = get_telephone( 'Name::Space' )|/my $phone = get_telephone( 'Special::Name::Space' );>
-
-This is an example of re-defining the name-space that the phone will use to 
-make a call.  When the switch board receives a call from this $telephone 
-it will come from 'Name::Space' rather than the caller stack definition.
-
-=head3 L<$telephone-E<gt>talk( level =E<gt> 'debug'|/$telephone-E<gt>talk( level =E<gt> 'debug',>
-
-This attempt to send a message is blocked because the 'log_file' is only unblocked to 
-the 'warn' level for 'main'.
-
-=head3 L<$telephone-E<gt>talk( level =E<gt> 'warn'|/$telephone-E<gt>talk( level =E<gt> 'warn',>
-
-This attempt to send a message works because the message sent to the 'log_file' 
-report space is sent at the 'warn' level.  (The message is held in the buffer)
-
-=head3 L<$operator-E<gt>send_buffer_to_output( 'log_file' )|/$operator-E<gt>send_buffer_to_output( 'log_file' );>
-
-This flushes the 'log_file' buffer out to the 'log_file' report(s).
-
-=head3 L<$telephone-E<gt>talk( message =E<gt> [ 'message' ]|/$telephone-E<gt>talk( message =E<gt>>
-
-This sends a new message to the 'log_file' buffer.  (Note that the default urgency is 
-the maximum urgency, the default report is 'log_file', and the maximum urgency is 
-not fatal.)
-
-=head3 L<$operator-E<gt>clear_buffer( 'log_file' )|/$operator-E<gt>clear_buffer( 'log_file' );>
-
-This clears the 'log_file' buffer of the current data. (1 new line)
-
-=head3 L<$phone-E<gt>talk( message =E<gt> "The code is done!"|/$phone-E<gt>talk( message =E<gt> "The code is done!",>
-
-Normally this code doesn't do anything since there is no report named 'killer'.  
-However, it calls for a 'fatal' level on killer and the name-space is unblocked for 
-fatal urgency level on the killer report so even though no reporting is done the special 
-'fatal' protocol is implemented.  (Meaning the message is confessed using L<Carp>).
 
 =head1 DESCRIPTION
 
 L<Shiras|http://en.wikipedia.org/wiki/Moose#Subspecies> - A small subspecies of 
 Moose found in the western United States (of America).
 
-This is a Moose based logger with the ability to run lean or add functionality using a 
-Moose class/role model.  While no individual element of this logger is unique to the 
-L<sea|https://metacpan.org/search?q=Log> of logging modules on CPAN the combination 
-of features and implementation is different.  The goal is to provide a base (set) of 
-Moose class(s) which can be used (and abused) for general input and output management.  
-The base use-case for this package is to allow debug reporting and module output to be 
-directed to multiple different locations and be able to manage these flows with 
-centralized logger-style name-spaces, logging-levels and config-files.  This package 
-is most related in concept to L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch>.
+This is L<one of many loggers|https://metacpan.org/search?q=Log> you can choose from in 
+CPAN.  The ultimate goal of this package is to add name-space control to any of your 
+programs outputs that you want name-space control of.  As the program stands today there 
+are three relevant name-spaces.  First, the file name-space, file name-space is the 
+name-space that we apply to specific files (modules or scripts).  The file name-space in 
+this package is treated as flat (no heirarchy) and is managed using L<source code filters
+|Log::Shiras::Unhide>.  File name-space filtering is therefore done at compile time with 
+no run time changes available.  The second name-space is a run time caller name-space that 
+can be adjusted as the program operates.  Run time name-space applied to the source of the 
+output.  Run time name-space is hierarchical and each output source can be assigned a level 
+of urgency.  This allows run time name-space filtering to be applied lower in the heirarchy 
+and remain in force out in the branch.  Permissions for run time name-space can also change 
+during run time.  Finally, there is a destination name-space.  Not all sources will wish to 
+call the same destination.  Destination name-space is flat and less flexible but still 
+somewhat editable at run time.  To sort of stich the last three concepts together mentally 
+I have used terminology associated with the old land line telephone system.  Run time or 
+caller name-space is managed through L<telephones|Log::Shiras::Telephone>.  Run time 
+permissions are managed through a L<switchboard|Log::Shiras::Switchboard> with switchboard 
+operators.  And destinations are called L<reports|Log::Shiras::Switchboard/reports>.  This 
+last term does not follow the terminology of the old land lines since communication through 
+this package is one direction.  Reports cannot send messages back on the same connection 
+that they use to receive information.
 
-I felt that the architecture differences in this package from the traditional run of 
-logging packages called for some terminology differences as well.  I chose to leverage 
-(loosely) the old telephone switchboard L<paradigm|https://en.wikipedia.org/wiki/Paradigm>.  
-The new terms are switchboard, operator, phone, and talk.  Ideas unchanged from the 
-logging world include logging levels, logging name spaces, config file management of 
-logging, and configurable output formatting. I also explicitly call logging output 
-'Reports'.
+All in all this can create a complex name-space landscape.  For this package all name-spaces 
+in the run environment are shared and caution should be used to manage uniqueness.  I would 
+encourage starting simple and working out if you don't have a lot of logging experience.  
+This package is most related in concept to L<Log::Dispatch>.
 
-In order to leverage the ability of Moose roles to modifiy behavior I made an 
-intentional decision to split the functions of traffic management, output handling, 
-and input handling into separate (but tightly linked) classes.  The tight link between 
-these classes is maintained by the 
-L<Log::Shiras::Switchboard|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm> 
-class.  This class is a L<MooseX::Singleton|https://metacpan.org/module/MooseX::Singleton>.  
-An instance of the switchboard class is called an 'Operator'.  You get a 'Switchboard' 
-class instance by calling the exported function 'get_operator' rather than -E<gt>new 
-so that the singleton magic can work.  The 'Operator's job is to manage the caller 
-name-space, the 'Report' name-space, and traffic between them in the 'Switchboard'.  
-The caller name-space (and urgency filtering) define what calls get through from where.  
-In the 'Switchboard' a 'Report' name-space can have an array of 
-L<Log::Shiras::Report|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report.pm>
-instances associated with it.  Each instance can have it's own destination 
-and formatting.  This package includes several 'Report' modifying roles or you can 
-write your own!  All content sent to a 'Report' namespace will go to each 'Report' 
-instance registered to that name.  For a set of code to send output to a 
-report (or 'Log' something) the code must first get an instance of the 
-L<Log::Shiras::Telephone|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm> 
-class.  The 'Switchboard' class exports a function called 'get_telephone' for this 
-purpose.  The function effectively calls 'Log::Shiras::Telephone->new( %args )' with 
-the addition of adding a prebuilt connection to the switchboard in the instance.  
-Since the 'Telephone' is connected to the switchboard the rules registered with 
-the switchboard are applied with each use of the telephone.
+=head2 Acknowledgement
 
-Warning: The telephone will generally not work for the 'import' sub.  You can use the debug 
-unhider there but most of the rest of this package is not available.  If you get it to 
-work thats great but it is not supported and therefore no bug reports for issues 
-in the import sub will be accepted.
-
+I was a strong user of L<Log::Log4perl> and L<Smart::Comments> prior to writing this package.  
+I borrowed heavily from them when writing this.
 
 =head1 Differentiation
 
-Why choose this Logger over one of the many other options?  Here are some additional 
-implementation decisions that I made that may or may not help that decision.
+Why choose this Logger over one of the many other options?  Here are some implementation 
+ecisions that I made that may or may not help that decision.  Many if not all exist in 
+other loggers.  I don't think they all exist together an any other logger.
 
 =head2 Buffer behavior
 
-This package has a report buffer (default off) for each report name.  This allows 
-for some messages to be discarded after they were collected based on branches in the 
-code.  A use case for this is when you are recursively parsing some logic but only 
-want to log the actions in the path that yielded results.  This is different than 
+This package has a destination buffer in the switchboard (default off) for each report 
+name.  This allows for some messages to be discarded after they were collected based on 
+branches in the code.  A use case for this is when you are recursively parsing some logic 
+but only want to log the actions in the path that yielded results.  This is different than 
 a print buffer that always goes to the output but the send is just delayed.
 
-=head2 L<Test::Log::Shiras>
+=head2 L<Log::Shiras::Test2>
 
 A dedicated test module for testing logged messages that will capture messages at 
 the switchboard level rather than requiring a connection to the final destination 
 of the report to review output.  This leverages the buffering behavior above.  
 The test methods include several ways of checking for output existence.  This 
 means that 'Telephone' output can be tested without building a 'Report' to 
-receive it.  Testing report content should be done using links built into 
-L<Log::Shiras::Report> roles for each report.  For an example see 
-L<Log::Shiras::Report::TieFile>.
+receive it.  Testing report content should be done traditionally.
 
 =head2 Headers
 
-The 'Report' Role in this package for files 
-L<Log::Shiras::Report::TieFile
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report/TieFile.pm> 
+The 'Report' class in this package for CSV files L<Log::Shiras::Report::CSVFile> 
 only adds the header to a file when it is new.  If the file connection 
 is dropped and then reconnected the header will not be added again if the 
-file is not empty.
+file is not empty.  It will also manage (or at least warn) on header drift.
 
 =head2 Custom formatting
 
@@ -312,103 +170,80 @@ L<Log::Shiras::Report::ShirasFormat
 Role for the 'Report' class does just that.  While the API isn't as mature as 
 Log4perl's 'PatternLayout' it does support full perl sprintf formatting.
 
-=head2 L<Moose|https://metacpan.org/module/Moose::Manual>
+=head2 L<Moose|Moose::Manual>
 
 This package is Moose based.  You probably already have an opinion on Moose so this 
-may tip you one way or the other.  I like Moose and I currently have no plans to 
-switch to L<Moo> but I would convert to the new p5-MOP if it gets added to the perl 
-core.
+may tip you one way or the other.
 
 =head2  Multiple output paths
 
-I wanted a one stop shop for file outputs.  I mentally group file outputs from 
-code into two categories.  First is 'log_file' output.  This is the way that code 
-leaves tracks from the ongoing process that it follows.  Second is 'report' output.  
-This is when data is generated by code for consumption elsewhere.  If this is the 
-only selling point of this package then you will probably prefer  
-L<Log::Dispatch|https://metacpan.org/module/Log::Dispatch>.
+Allowing more than one destination from the same source is helpful.  This means 
+you can write your output to multiple sources without wiring up the connection until 
+later.  See also L<Log::Dispatch>.
 
-=head2 Some things don't change
+=head2  Source filtering
+
+Excessive outputs for troubleshooting will overburden code.  Having a source filter 
+will allow the code to remain in source control (no retyping of print statements) 
+while still not burdening run time operations generally.
+
+=head2  Custom urgency levels
+
+If you feel the need you can re-define the urgency level words
+
+=head2 Re-routing print statements
+
+See L<Log::Shiras::TapPrint>
+
+=head2 Re-routing warn statements
+
+See L<Log::Shiras::TapWarn>
+
+=head2 Message meta data
+
+When messages are sent the switchboard bundles them with meta-data.  Mostly this 
+is basic stuff like where did I come from and when was I made.  For details 
+review L<Log::Shiras::Switchboard/master_talk( $args_ref )>
+
+=head1 Build/Install from Source
 
 =over
 
-=item B<flexibility:> General flexibility and ease of definition for configuration 
-through either config. files or data structures.
+B<1.> Download a compressed file with the code
 
-=item B<Separation of concerns:> Separation of output creation and destination 
-definitions.
+B<2.> Extract the code from the compressed file.
 
-=item B<name-spaces:> Output level screening by name-space and urgency.  This 
-includes the possibility of custom level definitions by report name-space.
+=over
 
-=item B<L<sprintf:|http://perldoc.perl.org/functions/sprintf.html>> sprintf 
-output formatting
+If you are using tar this should work:
+
+	tar -zxvf Log-Shiras-v0.xx.tar.gz
 
 =back
 
-=head1 Exported Methods
+B<3.> Change (cd) into the extracted directory.
 
-These are methods exported into a calling modules or scripts name_space.  
-This module uses L<Moose::Exporter>.
-
-=head3 get_telephone( 'Name::Space' )
+B<4.> Run the following
 
 =over
 
-=item B<Definition:> This returns an instance of the L<Log::Shiras::Telephone
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm> 
-class with a pre-built attachement to the L<Switchboard
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm>.  I<This 
-method is actually re-exported from the Switchboard class>.
+(For Windows find what version of make was used to compile your perl)
 
-=item B<Accepts:> a name-space array or string where B<::> are name-space separators 
-this represents the name-space origin for messages from the returned instance.  
-No passed value will capture the caller() namespace where all scripts start with 'main'.
+	perl  -V:make
 
-=item B<Returns:> A 'Telephone' class instance.  See  L<Log::Shiras::Telephone
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm> for more 
-documentation.
+(for Windows below substitute the correct make function (s/make/dmake/g)?)
 
 =back
 
-=head3 get_operator( %args )
+	>perl Makefile.PL
 
-=over
+	>make
 
-=item B<Definition:> This returns an instance of the L<Log::Shiras::Switchboard
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm> 
-class and the passed arguments are the initial setup definitions for the Switchboard 
-I<This method is actually re-exported from the Switchboard class>.
+	>make test
 
-=item B<Accepts:> all attribute definitions for the 'Switchboard' as key=E<gt>value 
-pairs.
+	>make install # As sudo/root
 
-=item B<Returns:> A 'Switchboard' class instance.  See  L<Log::Shiras::Switchboard
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Switchboard.pm> for more 
-documentation.
-
-=back
-
-=head1 GLOBAL VARIABLES
-
-=over
-
-=item B<$ENV{Smart_Comments}>
-
-I would eventually like for this package to self report but my first few attempts 
-caused ugly deep recursion and my efforts to resolve it just caused more problems.  
-So for now the package uses L<Smart::Comments> if the '-ENV' option is set. The 
-'use' statement is encapsulated in an 'if' block triggered by an environmental 
-variable to comfort non-believers.  Setting the variable $ENV{Smart_Comments} will 
-load and turn on L<Smart::Comments> reporting.  There are three levels of 'Smartness' 
-available in this module '### #### #####'.
-
-=item B<$ENV{Moose_Phone}>
-
-The one variation from my Moose evangelisim is not using Moose for the 
-L<Log::Shiras::Telephone|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Telephone.pm> 
-class.  If you want to go all-in on Moose then set this variable to true in a 
-BEGIN block and you will get fully Moose enabled telephones.
+	>make clean
 
 =back
 
@@ -424,19 +259,9 @@ BEGIN block and you will get fully Moose enabled telephones.
 
 =over
 
-B<1.> Get the package to self report
+B<1.> Build a Database connection Report role
 
-B<2.> Consider allowing a 'BLOCK' flag in the namespace (Turning off UNBLOCK)
-
-B<3.> Build a Database connection Report role
-
-B<4.> Allow placeholders in a config file for run-time arguments
-
-B<5.> Add TapFatal with a fatal gracefully feature
-
-B<6.> Add method to pull a caller($x) stack that can be triggered in the namespace 
-boundaries.  Possibly this would be blocked on or off by talk() command (so only the 
-first talk of the method would get it).
+B<2.> Add TapFatal with a fatal gracefully feature
 
 =back
 
@@ -458,57 +283,11 @@ it and/or modify it under the same terms as Perl itself.
 The full text of the license can be found in the
 LICENSE file included with this package
 
-This software is copyrighted (c) 2013 by Jed Lund
+This software is copyrighted (c) 2012, 2016 by Jed Lund
 
 =head1 DEPENDANCIES
 
-=over
-
-=item L<5.010>
-
-=item L<DateTime>
-
-=item L<Carp> = cluck confess
-
-=item L<version>
-
-=item L<YAML::Any>
-
-=item L<JSON::XS>
-
-=item L<IO::Callback>
-
-=item L<Moose>
-
-=item L<Moose::Exporter>
-
-=item L<MooseX::Types>
-
-=item L<MooseX::Types::Moose>
-
-=item L<MooseX::Singleton>
-
-=item L<MooseX::StrictConstructor>
-
-=item L<MooseX::ShortCut::BuildInstance>
-
-=item L<Data::Walk::Extracted>
-
-=item L<Data::Walk::Prune>
-
-=item L<Data::Walk::Clone>
-
-=item L<Data::Walk::Graft>
-
-=item L<Log::Shiras::Types>
-
-=item L<Log::Shiras::Switchboard>
-
-=item L<Log::Shiras::Telephone>
-
-=item L<Log::Shiras::Report>
-
-=back
+See individual modules
 
 =head1 SEE ALSO
 
@@ -520,11 +299,7 @@ This software is copyrighted (c) 2013 by Jed Lund
 
 =item L<Log::Report>
 
-=item L<Log::Shiras::Report::ShirasFormat>
-
-=item L<Log::Shiras::Report::TieFile>
-
-=item L<Test::Log::Shiras>
+=back
 
 =cut
 	
