@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.37.9");
+use version 0.77; our $VERSION = version->declare("v0.37.11");
 use utf8;
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__

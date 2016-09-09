@@ -13,6 +13,10 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.37.11  2016-09-10 07:40:18-07:00 America/Los_Angeles
+
+	! Fix .travis.yml that I just broke
+
 v0.37.9   2016-09-10 06:26:46-07:00 America/Los_Angeles
 
 	* Another cool change
