@@ -156,7 +156,7 @@ $test_class->set_match_retention( 1 );
 $test_class->match_message( 'report1', qr/Hello World 1/,
 										"... and check the output" );
 $test_class->set_match_retention( 0 );
-$test_class->match_message( 'report1', qr/Log::Shiras::Telephone::talk\(Log::Shiras::Telephone=HASH\(0x.{4,20}\), .{1,2}carp_stack.{1,2}, 1, .{1,2}report.{1,2}, .{1,2}report1.{1,2}, .{1,2}level.{1,2}, .{1,2}eleven.{1,2}, .{1,2}message.{1,2},/,
+$test_class->match_message( 'report1', qr/.{0,2}Log::Shiras::Telephone::talk\(Log::Shiras::Telephone=HASH\(0x.{4,20}\).{0,2}, .{1,2}carp_stack.{1,2}, 1, .{1,2}report.{1,2}, .{1,2}report1.{1,2}, .{1,2}level.{1,2}, .{1,2}eleven.{1,2}, .{1,2}message.{1,2},/,
 										"... Also check for some longmess called in the details of the message" );
 ok( lives{	$main_phone->talk( report => 'run', level => 'debug', message =>[ 'Hello World 2' ], ) },
 										"Test making a call with too low of a level")

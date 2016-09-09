@@ -10,8 +10,12 @@ NOTE: This software is designated as beta quality until this notice is removed.
     Intitial CPAN release plus one year is probably the minimum before a v1.0 release.
 
 {{$NEXT}}
-
+	
 	* Another cool change
+
+v0.35.0   2016-09-09 16:07:55-07:00 America/Los_Angeles
+
+	! Another fix for 04-telephone.t failing in perl 5.16 and 5.18
 
 v0.33.0   2016-09-09 15:51:35-07:00 America/Los_Angeles
 
