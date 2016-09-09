@@ -1,5 +1,5 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.38.2");
+use version; our $VERSION = version->declare("v0.38.4");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
 ###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
