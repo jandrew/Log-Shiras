@@ -13,6 +13,10 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.37.7   2016-09-10 06:18:06-07:00 America/Los_Angeles
+
+	! Another test to see why perl 5.10 isn't working
+
 v0.37.5   2016-09-10 05:46:23-07:00 America/Los_Angeles
 
 	! Another test to see why perl 5.10 isn't working

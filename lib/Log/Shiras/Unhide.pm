@@ -1,5 +1,5 @@
 package Log::Shiras::Unhide;
-use version; our $VERSION = version->declare("v0.37.5");
+use version; our $VERSION = version->declare("v0.37.7");
 use utf8;
 use 5.010;
 use strict;
@@ -86,7 +86,7 @@ sub import {
 		$strip_match = '(' . join( '|', @strip_list	) . ')';
 		warn "Using Log::Shiras::Unhide-$VERSION strip_match string: $strip_match" if !$ENV{hide_warn};
 		_resurrector_init();
-
+		$ENV{loaded_filter_util_call} = 1;
 		# Check for Filter::Util::Call availability
 		warn "Attempting to strip leading qr/###$Log::Shiras::Unhide::strip_match/" if IMPORT_DEBUG;
 		my $FILTER_MODULE = "Filter::Util::Call";
@@ -159,14 +159,7 @@ sub _resurrector_loader {
     my $abs_path = File::Spec->rel2abs( $path );
     warn "Setting %INC entry of $module to $abs_path" if INTERNAL_DEBUG;
     $INC{$module} = $abs_path;
-	#~ my	$module_copy = $module if INTERNAL_DEBUG;
-		#~ $module_copy =~ s/\//::/g if INTERNAL_DEBUG;
-		#~ $module_copy =~ s/\.pm//g if INTERNAL_DEBUG;
-	#~ if( INTERNAL_DEBUG and $module_copy =~ /(BuildInstance)/ ){
-		eval 'use $module_copy';
-		#~ my $module_meta = $module_copy->new->meta;
-		#~ $module_meta->dump(3);
-	#~ }
+	eval 'use $module_copy';
     return $fh;
 }
 

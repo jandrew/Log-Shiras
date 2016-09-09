@@ -37,7 +37,7 @@ use Log::Shiras::Report::Test2Note;
 use Log::Shiras::Switchboard;
 use Log::Shiras::Telephone;
 use Log::Shiras::Test2;
-diag "Loaded all the modules";
+diag "Modules all loaded";
 my(
 			$ella_peterson, 		$name_space_ref,		$report_ref,
 			$test_class,			$main_phone,	

@@ -1,5 +1,5 @@
 package Log::Shiras::Types;
-use version; our $VERSION = version->declare("v0.37.5");
+use version; our $VERSION = version->declare("v0.37.7");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTypeSShirasFormat :InternalTypeSFileHash :InternalTypeSReportObject :InternalTypeSHeadeR);
 ###InternalTypeSShirasFormat	use Data::Dumper;

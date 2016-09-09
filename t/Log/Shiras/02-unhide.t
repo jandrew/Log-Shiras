@@ -28,7 +28,7 @@ BEGIN{
 }
 $| = 1;
 use Test2::Plugin::UTF8;
-plan 4;
+plan( 4 );
 use lib $lib, $examples_lib;
 #~ use Module::Runtime qw( require_module ) or diag $!;
 use Log::Shiras::Unhide qw( :debug :Meditation  :Health :Family );

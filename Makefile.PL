@@ -63,14 +63,13 @@ my %WriteMakefileArgs = (
   "TEST_REQUIRES" => {
     "Capture::Tiny" => "0.12",
     "Filter::Util::Call" => "1.55",
-    "Level1" => 0,
     "Modern::Perl" => 0,
     "Test2::Bundle::Extended" => 0,
     "Test2::Plugin::UTF8" => 0,
     "Test::File" => 0,
     "Test::Moose" => 0
   },
-  "VERSION" => "v0.37.5",
+  "VERSION" => "v0.37.7",
   "test" => {
     "TESTS" => "t/Log/Shiras/*.t t/Log/Shiras/Report/*.t"
   }
@@ -96,7 +95,6 @@ my %FallbackPrereqs = (
   "IO::Callback" => 0,
   "IO::File" => 0,
   "JSON::XS" => 0,
-  "Level1" => 0,
   "Modern::Perl" => 0,
   "Module::Runtime" => 0,
   "Moose" => 0,
