@@ -13,48 +13,15 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
-v0.37.13  2016-09-10 07:52:30-07:00 America/Los_Angeles
+v0.38.0   2016-09-10 08:03:18-07:00 America/Los_Angeles
 
+	+ CPAN release candidate
+
+v0.37.13  2016-09-10 07:52:30-07:00 America/Los_Angeles 
+
+	(cumulative since v0.30.0)
 	! Block unicore/* scrubbing in ~::Unhide
-
-v0.37.11  2016-09-10 07:40:18-07:00 America/Los_Angeles
-
-	! Fix .travis.yml that I just broke
-
-v0.37.9   2016-09-10 06:26:46-07:00 America/Los_Angeles
-
-	* Another cool change
-
-v0.37.7   2016-09-10 06:18:06-07:00 America/Los_Angeles
-
-	! Another test to see why perl 5.10 isn't working
-
-v0.37.5   2016-09-10 05:46:23-07:00 America/Los_Angeles
-
-	! Another test to see why perl 5.10 isn't working
-
-v0.37.3   2016-09-10 05:41:10-07:00 America/Los_Angeles
-
-	! Another test to see why perl 5.10 isn't working
-
-v0.37.1   2016-09-09 16:47:04-07:00 America/Los_Angeles
-	
-	! A test to see why perl 5.10 isn't working
-
-v0.37.0   2016-09-09 16:21:04-07:00 America/Los_Angeles
-	
-	! Another fix for 04-telephone.t failing in perl 5.16 and 5.18
-
-v0.35.0   2016-09-09 16:07:55-07:00 America/Los_Angeles
-
-	! Another fix for 04-telephone.t failing in perl 5.16 and 5.18
-
-v0.33.0   2016-09-09 15:51:35-07:00 America/Los_Angeles
-
-	! Fixed a test failing in perl 5.16 and 5.18
-
-v0.31.0   2016-09-09 14:35:20-07:00 America/Los_Angeles
-
+	! Fixed for 04-telephone.t  failing in perl 5.16 and 5.18
 	! Added requirement for Filter::Util::Call to test
 
 v0.30.0   2016-09-09 14:20:26-07:00 America/Los_Angeles

@@ -33,7 +33,6 @@ use lib $lib, $examples_lib;
 #~ use Module::Runtime qw( require_module ) or diag $!;
 use Log::Shiras::Unhide qw( :debug :Meditation  :Health :Family );
 use Level1;
-diag "Modules all loaded";
 SKIP: {
 	skip( "The filter module -Filter::Util::Call- is not installed", 3 ) if !$ENV{loaded_filter_util_call};
 			my	$basic = 'Nothing';
