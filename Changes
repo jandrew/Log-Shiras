@@ -13,6 +13,11 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.38.2   2016-09-10 16:42:11-07:00 America/Los_Angeles
+
+	+ Changed .travis.yml to run coverage on 5.24
+	+ Made several improvements to the top level POD
+
 v0.38.0   2016-09-10 08:03:18-07:00 America/Los_Angeles
 
 	+ CPAN release candidate

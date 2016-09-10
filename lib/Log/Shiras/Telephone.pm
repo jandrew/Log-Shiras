@@ -1,5 +1,5 @@
 package Log::Shiras::Telephone;
-use version; our $VERSION = version->declare("v0.38.0");
+use version; our $VERSION = version->declare("v0.38.2");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTelephonE );
 ###InternalTelephonE	warn "You uncovered internal logging statements for Log::Shiras::Telephone-$VERSION" if !@$ENV{hide_warn};
