@@ -1,5 +1,5 @@
 package Log::Shiras::Report::MetaMessage;
-use version; our $VERSION = version->declare("v0.29_1");
+use version; our $VERSION = version->declare("v0.38.0");
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTMetaMessagE );
 ###InternalReporTMetaMessagE	warn "You uncovered internal logging statements for Log::Shiras::Report::MetaMessage-$VERSION" if !$ENV{hide_warn};

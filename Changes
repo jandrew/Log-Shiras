@@ -7,11 +7,26 @@ Uses the change tracking convention
 	* Place holder
 
 NOTE: This software is designated as beta quality until this notice is removed.  
-    Intitial CPAN release plus one year is probably the minimum before a v0.0 release.
+    Intitial CPAN release plus one year is probably the minimum before a v1.0 release.
 
 {{$NEXT}}
 
 	* Another cool change
+
+v0.38.0   2016-09-10 08:03:18-07:00 America/Los_Angeles
+
+	+ CPAN release candidate
+
+v0.37.13  2016-09-10 07:52:30-07:00 America/Los_Angeles 
+
+	(cumulative since v0.30.0)
+	! Block unicore/* scrubbing in ~::Unhide
+	! Fixed for 04-telephone.t  failing in perl 5.16 and 5.18
+	! Added requirement for Filter::Util::Call to test
+
+v0.30.0   2016-09-09 14:20:26-07:00 America/Los_Angeles
+
+	+ Updated version numbers for an initial CPAN release
 
 v0.29_1   2016-09-09 14:03:12-07:00 America/Los_Angeles (TRIAL RELEASE)
 

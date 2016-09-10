@@ -1,11 +1,11 @@
 package Log::Shiras::Unhide;
-use version; our $VERSION = version->declare("v0.29_1");
+use version; our $VERSION = version->declare("v0.38.0");
 use utf8;
 use 5.010;
 use strict;
 use warnings;
 # [rt.cpan.org #84818]
-use if $^O eq "MSWin32", "Win32"; 
+use if $^O eq "MSWin32", "Win32";
 
 use File::Temp;# qw(tempfile);
 #~ $File::Temp::DEBUG = 1;
@@ -19,7 +19,7 @@ use lib
 use constant IMPORT_DEBUG => 0; # Unhide Dev testing only
 use constant INTERNAL_DEBUG => 0; # Unhide Dev testing only
 use constant VIEW_TRANSFORM => 0; # Unhide Dev testing only
-my	$my_unhide_skip_check = qr/( 
+my	$my_unhide_skip_check = qr/(
 		^Archive.Zip|		^attributes|		^AutoLoader|		^B\.pm|
 		^B.(Op_|Deparse)|	^B.(Hooks)|			^Carp|				^Class|
 		^Clone|				^common|			^Compress.Raw|		^Cwd|
@@ -33,8 +33,9 @@ my	$my_unhide_skip_check = qr/(
 		^PerlIO|			^POSIX|				^re\.pm|			^SelfLoader|
 		^SetDual|			^Smart|				^Sub|				^Test2|
 		^Tie|				^Text|				^Time.Local|		^Try|
-		^Type|				^UNIVERSAL|			^utf8|				^Variable|
-		^Win32|				^XML|				^YAML				
+		^Type|				^unicore|			^UNIVERSAL|			^utf8|
+		^Variable|			^Win32|				^XML|				
+		^YAML				
 	)/x;
 my	$run_once_hash;
 our	$strip_match;
@@ -51,12 +52,12 @@ sub import {
 		_resurrector_init();
 		return 1;
 	}
-	
+
 	warn "Received args:" . join( '~|~', @args ) if @args and IMPORT_DEBUG;
-	
+
 	# Build a temporary directory
 	$temp_dir = File::Temp->newdir( CLEANUP => 1 );
-	
+
 	# Handle versions
 	if( $args[0] and $args[0] =~ /^v?\d+\.?\d*/ ){# Version check since import highjacks the built in
 		warn "Running version check on version: $args[0]" if IMPORT_DEBUG;
@@ -80,20 +81,20 @@ sub import {
 			die "Flag -$flag- passed to import Log::Shiras::Switchboard did not pass the format test.";
 		}
 	}
-	
+
 	# Implement string stripping
 	if( @strip_list ){
 		$strip_match = '(' . join( '|', @strip_list	) . ')';
 		warn "Using Log::Shiras::Unhide-$VERSION strip_match string: $strip_match" if !$ENV{hide_warn};
 		_resurrector_init();
-		
+		$ENV{loaded_filter_util_call} = 1;
 		# Check for Filter::Util::Call availability
 		warn "Attempting to strip leading qr/###$Log::Shiras::Unhide::strip_match/" if IMPORT_DEBUG;
 		my $FILTER_MODULE = "Filter::Util::Call";
 		my $require_result;
 		eval{ $require_result = require_module( 'Filter::Util::Call' ) };# require_module( $FILTER_MODULE ) };#
 		if( $require_result and ($require_result == 1  or $require_result eq $FILTER_MODULE) ) {
-			
+			$ENV{loaded_filter_util_call} = 1;
 			# Strip the top level script
 			Filter::Util::Call::filter_add(
 				sub {
@@ -134,7 +135,7 @@ sub _resurrector_loader {
 
     my $path = $module;
 	warn "Finding the location of module: $module" if INTERNAL_DEBUG;
-	
+
 	# Skip unknown files
     if(!-f $module) {
           # We might have a 'use lib' statement that modified the
@@ -159,14 +160,7 @@ sub _resurrector_loader {
     my $abs_path = File::Spec->rel2abs( $path );
     warn "Setting %INC entry of $module to $abs_path" if INTERNAL_DEBUG;
     $INC{$module} = $abs_path;
-	#~ my	$module_copy = $module if INTERNAL_DEBUG;
-		#~ $module_copy =~ s/\//::/g if INTERNAL_DEBUG;
-		#~ $module_copy =~ s/\.pm//g if INTERNAL_DEBUG;
-	#~ if( INTERNAL_DEBUG and $module_copy =~ /(BuildInstance)/ ){
-		eval 'use $module_copy';		
-		#~ my $module_meta = $module_copy->new->meta;
-		#~ $module_meta->dump(3);
-	#~ }
+	eval 'use $module_copy';
     return $fh;
 }
 
@@ -188,7 +182,7 @@ sub _pm_search {
 }
 
 sub _resurrector_fh {
-	
+
     my( $file, ) = @_;
 	warn "Resurrecting lines from file: $file" if INTERNAL_DEBUG;
 	warn "with string: $strip_match" if INTERNAL_DEBUG;
@@ -201,17 +195,17 @@ sub _resurrector_fh {
 		warn "Read ", length($text), " bytes from $file" if INTERNAL_DEBUG;
 	}
 	close $start_file_handle;
-	
+
 	# Transform the file
 	$text =~ s/^(\s*)###$strip_match\s/$1/mg;
 	warn "----->script scrubbed file:\n$text" if VIEW_TRANSFORM;
 	warn "-------------------------------------------->Module Scrub complete" if INTERNAL_DEBUG;
-	
+
 	# Turn it back over to management by the INC loader via fh
 	my( $tmp_fh ) = File::Temp->new( UNLINK => 1, DIR => $temp_dir );# ( UNLINK => 1 );
     print $tmp_fh $text;
     seek $tmp_fh, 0, 0;
-	
+
 	return $tmp_fh;
 }
 
@@ -271,24 +265,24 @@ Log::Shiras::Unhide - Unhides Log::Shiras hidden comments in @ISA
 
 =head1 DESCRIPTION
 
-This package will strip '###SomeKey' tags from your script after the 'use Log::Shiras::Unhide;' 
-statement.  It will also recursivly parse down through any included lower level modules as well.  
-If Log::Shiras::Unhide is called in some lower place it's import settings there will be 
+This package will strip '###SomeKey' tags from your script after the 'use Log::Shiras::Unhide;'
+statement.  It will also recursivly parse down through any included lower level modules as well.
+If Log::Shiras::Unhide is called in some lower place it's import settings there will be
 overridden by the top level call.
 
-Since this module implements a source filter and source filters are not universally loved the 
-module will generally emit a warning statement when it implements the source filter.  To turn 
-that off you need to set $ENV{hide_warn} = 1 in a BEGIN block prior to 'use'ing 
-Log::Shiras::Unhide.  The SYNOPSIS includes examples of various tags that are stripped at 
-compile time with some examples of tags in the code that are not stripped since they are 
-not passed to L<import|http://perldoc.perl.org/functions/import.html>.  It is important to note 
-that both the synopsis and supporting modules are all stored in the 'examples' folder of this 
-distribution.  You can inspect the specific implemenation for Level1.pm which uses Level2.pm 
-which uses Level3.pm.  This demonstrates that the source filter is implemented accross the full 
+Since this module implements a source filter and source filters are not universally loved the
+module will generally emit a warning statement when it implements the source filter.  To turn
+that off you need to set $ENV{hide_warn} = 1 in a BEGIN block prior to 'use'ing
+Log::Shiras::Unhide.  The SYNOPSIS includes examples of various tags that are stripped at
+compile time with some examples of tags in the code that are not stripped since they are
+not passed to L<import|http://perldoc.perl.org/functions/import.html>.  It is important to note
+that both the synopsis and supporting modules are all stored in the 'examples' folder of this
+distribution.  You can inspect the specific implemenation for Level1.pm which uses Level2.pm
+which uses Level3.pm.  This demonstrates that the source filter is implemented accross the full
 depth of used packages.
 
-When Moose uses a role with the word 'with' the Unhide process is not called.  You can get 
-around this by calling 'use My::Role' prior to 'with My::Role'.  The role will then be consumed 
+When Moose uses a role with the word 'with' the Unhide process is not called.  You can get
+around this by calling 'use My::Role' prior to 'with My::Role'.  The role will then be consumed
 (implemented) by 'with' in it's stripped state.
 
 This class takes unashamedly from L<Log::Log4perl::Resurrector>.  Any mistakes are my
@@ -296,38 +290,38 @@ own and the genius is from there.  Log::Log4perl::Resurrector also credits the
 L<Acme::Incorporated> CPAN module, written by L<chromatic|/https://metacpan.org/author/CHROMATIC>.
 Of course none of it would be possible without L<Filter::Util::Call>.  Long live CPAN!
 
-The point of using this module is to add lines that are only exposed some time.  However, 
-this makes it difficult to troubleshoot syntax errors in those lines using your favorite 
-editor or debuger when implementing the lines to begin with.  One way to resolve this is to 
-place two lines at the top of your code that will unhide those lines temporarily when you 
-are testing it and then either delelete or comment out the first line when releasing.  The 
-purpose of the first line is to unhide your lines for testing and the second will issue a 
+The point of using this module is to add lines that are only exposed some time.  However,
+this makes it difficult to troubleshoot syntax errors in those lines using your favorite
+editor or debuger when implementing the lines to begin with.  One way to resolve this is to
+place two lines at the top of your code that will unhide those lines temporarily when you
+are testing it and then either delelete or comment out the first line when releasing.  The
+purpose of the first line is to unhide your lines for testing and the second will issue a
 warning so you don't forget you are in dev mode.  An example is;
 
     #~ use Log::Shiras::Unhide qw( :MyCoolUnhideStrinG );
     ###MyCoolUnhideStrinG	warn "You uncovered internal logging statements for My::Cool::Package-$VERSION";
-	
-If you choose to leave line two in then you also have an indication if the module was 
+
+If you choose to leave line two in then you also have an indication if the module was
 implemented in a stripped fashion whenever you call it.
 
 TL;DR
 
 This package definitly falls in the dark magic catagory and will only slow your code down.
 Don't use it if you arn't willing to pay the price.  The value is all the interesting
-information you receive from the exposed code.  While this does use Filter::Util::Call 
-to handle scrubbing the top level script. The included modules are scrubbed with a L<hook 
-into @INC|http://perldoc.perl.org/functions/require.html> I<search for hook on that page> 
-The scrubbed modules are built and loaded via temporary files built with L<File::Temp>.  
-In general this is a good think since File::Temp does a good job of garbage collection 
-the garbage collection fails when the code 'dies' or 'confesses..  If your code regularly 
-dies or fails while ~::Unhide is active it will leave a lot of orphaned files in the temp 
+information you receive from the exposed code.  While this does use Filter::Util::Call
+to handle scrubbing the top level script. The included modules are scrubbed with a L<hook
+into @INC|http://perldoc.perl.org/functions/require.html> I<search for hook on that page>
+The scrubbed modules are built and loaded via temporary files built with L<File::Temp>.
+In general this is a good think since File::Temp does a good job of garbage collection
+the garbage collection fails when the code 'dies' or 'confesses..  If your code regularly
+dies or fails while ~::Unhide is active it will leave a lot of orphaned files in the temp
 directory.
 
-This module also adds a startup hit to any processing where filtering is turned on and as 
-such should be used with caution, however, an attempt has been made to mitigate that by 
+This module also adds a startup hit to any processing where filtering is turned on and as
+such should be used with caution, however, an attempt has been made to mitigate that by
 excluding Module names matching the following regex;
 
-	qr/( 
+	qr/(
 		^Archive.Zip|		^attributes|		^AutoLoader|		^B\.pm|
 		^B.(Op_|Deparse)|	^B.(Hooks)|			^Carp|				^Class|
 		^Clone|				^common|			^Compress.Raw|		^Cwd|
@@ -342,46 +336,46 @@ excluding Module names matching the following regex;
 		^SetDual|			^Smart|				^Sub|				^Test2|
 		^Tie|				^Text|				^Time.Local|		^Try|
 		^Type|				^UNIVERSAL|			^utf8|				^Variable|
-		^Win32|				^XML|				^YAML				
+		^Win32|				^XML|				^YAML
 	)/x;
 
 =head2 Methods
 
-This module does not provide any methods for the user other than what is called during 'use'.  
+This module does not provide any methods for the user other than what is called during 'use'.
 (import) Private methods will not be documented.
 
 =head3 import
 
 =over
 
-B<Definition:> perl auto calls import anytime the module is 'use'd.  In this case the import 
-statement will accept (first only and optional) a minimum version requirement in either v-string or 
-decimal input.  It will also accept any number of text strings matched to the regex [A-Za-z]+ 
-prepended with ':'.  These strings will be treated as case sensitive targets for this module 
-to find and expose the line behind them using a source filter.  It will look in 'use'd modules 
-and strip those lines as well.  The flags are transposed to include three '#'s without the colon.  
-There can be more than one passed flag and all will be implemented.  An example of the stripping 
+B<Definition:> perl auto calls import anytime the module is 'use'd.  In this case the import
+statement will accept (first only and optional) a minimum version requirement in either v-string or
+decimal input.  It will also accept any number of text strings matched to the regex [A-Za-z]+
+prepended with ':'.  These strings will be treated as case sensitive targets for this module
+to find and expose the line behind them using a source filter.  It will look in 'use'd modules
+and strip those lines as well.  The flags are transposed to include three '#'s without the colon.
+There can be more than one passed flag and all will be implemented.  An example of the stripping
 implementation of imported flags are;
 
 	qw(:FooBar :Baz) -> $line =~ s/^(\s*)###(FooBar|Baz)\s/$1/mg;
-	
+
 There is one special flag that is transposed
 
 	:debug -> strips '###LogSD' (for Log Shiras Debug)
-	
-The overall package eats its own dogfood and uses module specific flags starting with 'InternaL'.  
+
+The overall package eats its own dogfood and uses module specific flags starting with 'InternaL'.
 See the source for each module to understand which flag is used.
 
 B<Accepts:> $VERSION and colon prepended strip flags
 
 B<Returns:> nothing, but it transforms files prior to use
-	
+
 =back
 
 =head1 Tags Available in CPAN
 
-This is a list (not comprehensive) of tags embedded in packages I have released to CPAN.  Since 
-they require a source filter to uncover there should be minimal impact to using these packages 
+This is a list (not comprehensive) of tags embedded in packages I have released to CPAN.  Since
+they require a source filter to uncover there should be minimal impact to using these packages
 unless this class is used.
 
 =over
@@ -434,8 +428,8 @@ L<Log-Shiras/issues|https://github.com/jandrew/Log-Shiras/issues>
 
 =item B<$ENV{hide_warn}>
 
-The module will warn when tags are passed to it so you have visibility to Unhide 
-actions.  In the case where the you don't want these notifications set this 
+The module will warn when tags are passed to it so you have visibility to Unhide
+actions.  In the case where the you don't want these notifications set this
 environmental variable to true.
 
 =back
@@ -476,7 +470,7 @@ L<perl 5.010|perl/5.10.0>
 
 L<version>
 
-L<IO::File>
+L<File::Temp>
 
 L<File::Spec>
 

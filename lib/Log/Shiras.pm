@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.29_1");
+use version 0.77; our $VERSION = version->declare("v0.38.0");
 use utf8;
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__
@@ -37,7 +37,7 @@ Log::Shiras - A Moose based logging and reporting tool
 =end html
 
 =head1 SYNOPSIS
-    
+
 	#!perl
 	use Modern::Perl;
 	use lib 'lib', '../lib',;
@@ -74,7 +74,7 @@ Log::Shiras - A Moose based logging and reporting tool
 	$telephone->talk( level => 'info', message => 'Hello World 2' );
 	###LogSD warn "message sent with sufficient permissions";
 	shout_at_me( 'Hello World 3' );
-        
+
 	#####################################################################################
 	#	Synopsis screen output
 	# 01: Using Log::Shiras::Unhide-v0.29_1 strip_match string: (LogSD) at ../lib/Log/Shiras/Unhide.pm line 87.
@@ -95,96 +95,96 @@ Log::Shiras - A Moose based logging and reporting tool
 
 =head1 DESCRIPTION
 
-L<Shiras|http://en.wikipedia.org/wiki/Moose#Subspecies> - A small subspecies of 
+L<Shiras|http://en.wikipedia.org/wiki/Moose#Subspecies> - A small subspecies of
 Moose found in the western United States (of America).
 
-This is L<one of many loggers|https://metacpan.org/search?q=Log> you can choose from in 
-CPAN.  The ultimate goal of this package is to add name-space control to any of your 
-programs outputs that you want name-space control of.  As the program stands today there 
-are three relevant name-spaces.  First, the file name-space, file name-space is the 
-name-space that we apply to specific files (modules or scripts).  The file name-space in 
+This is L<one of many loggers|https://metacpan.org/search?q=Log> you can choose from in
+CPAN.  The ultimate goal of this package is to add name-space control to any of your
+programs outputs that you want name-space control of.  As the program stands today there
+are three relevant name-spaces.  First, the file name-space, file name-space is the
+name-space that we apply to specific files (modules or scripts).  The file name-space in
 this package is treated as flat (no heirarchy) and is managed using L<source code filters
-|Log::Shiras::Unhide>.  File name-space filtering is therefore done at compile time with 
-no run time changes available.  The second name-space is a run time caller name-space that 
-can be adjusted as the program operates.  Run time name-space applied to the source of the 
-output.  Run time name-space is hierarchical and each output source can be assigned a level 
-of urgency.  This allows run time name-space filtering to be applied lower in the heirarchy 
-and remain in force out in the branch.  Permissions for run time name-space can also change 
-during run time.  Finally, there is a destination name-space.  Not all sources will wish to 
-call the same destination.  Destination name-space is flat and less flexible but still 
-somewhat editable at run time.  To sort of stich the last three concepts together mentally 
-I have used terminology associated with the old land line telephone system.  Run time or 
-caller name-space is managed through L<telephones|Log::Shiras::Telephone>.  Run time 
-permissions are managed through a L<switchboard|Log::Shiras::Switchboard> with switchboard 
-operators.  And destinations are called L<reports|Log::Shiras::Switchboard/reports>.  This 
-last term does not follow the terminology of the old land lines since communication through 
-this package is one direction.  Reports cannot send messages back on the same connection 
+|Log::Shiras::Unhide>.  File name-space filtering is therefore done at compile time with
+no run time changes available.  The second name-space is a run time caller name-space that
+can be adjusted as the program operates.  Run time name-space applied to the source of the
+output.  Run time name-space is hierarchical and each output source can be assigned a level
+of urgency.  This allows run time name-space filtering to be applied lower in the heirarchy
+and remain in force out in the branch.  Permissions for run time name-space can also change
+during run time.  Finally, there is a destination name-space.  Not all sources will wish to
+call the same destination.  Destination name-space is flat and less flexible but still
+somewhat editable at run time.  To sort of stich the last three concepts together mentally
+I have used terminology associated with the old land line telephone system.  Run time or
+caller name-space is managed through L<telephones|Log::Shiras::Telephone>.  Run time
+permissions are managed through a L<switchboard|Log::Shiras::Switchboard> with switchboard
+operators.  And destinations are called L<reports|Log::Shiras::Switchboard/reports>.  This
+last term does not follow the terminology of the old land lines since communication through
+this package is one direction.  Reports cannot send messages back on the same connection
 that they use to receive information.
 
-All in all this can create a complex name-space landscape.  For this package all name-spaces 
-in the run environment are shared and caution should be used to manage uniqueness.  I would 
-encourage starting simple and working out if you don't have a lot of logging experience.  
+All in all this can create a complex name-space landscape.  For this package all name-spaces
+in the run environment are shared and caution should be used to manage uniqueness.  I would
+encourage starting simple and working out if you don't have a lot of logging experience.
 This package is most related in concept to L<Log::Dispatch>.
 
 =head2 Acknowledgement
 
-I was a strong user of L<Log::Log4perl> and L<Smart::Comments> prior to writing this package.  
+I was a strong user of L<Log::Log4perl> and L<Smart::Comments> prior to writing this package.
 I borrowed heavily from them when writing this.
 
 =head1 Differentiation
 
-Why choose this Logger over one of the many other options?  Here are some implementation 
-ecisions that I made that may or may not help that decision.  Many if not all exist in 
+Why choose this Logger over one of the many other options?  Here are some implementation
+ecisions that I made that may or may not help that decision.  Many if not all exist in
 other loggers.  I don't think they all exist together an any other logger.
 
 =head2 Buffer behavior
 
-This package has a destination buffer in the switchboard (default off) for each report 
-name.  This allows for some messages to be discarded after they were collected based on 
-branches in the code.  A use case for this is when you are recursively parsing some logic 
-but only want to log the actions in the path that yielded results.  This is different than 
+This package has a destination buffer in the switchboard (default off) for each report
+name.  This allows for some messages to be discarded after they were collected based on
+branches in the code.  A use case for this is when you are recursively parsing some logic
+but only want to log the actions in the path that yielded results.  This is different than
 a print buffer that always goes to the output but the send is just delayed.
 
 =head2 L<Log::Shiras::Test2>
 
-A dedicated test module for testing logged messages that will capture messages at 
-the switchboard level rather than requiring a connection to the final destination 
-of the report to review output.  This leverages the buffering behavior above.  
-The test methods include several ways of checking for output existence.  This 
-means that 'Telephone' output can be tested without building a 'Report' to 
+A dedicated test module for testing logged messages that will capture messages at
+the switchboard level rather than requiring a connection to the final destination
+of the report to review output.  This leverages the buffering behavior above.
+The test methods include several ways of checking for output existence.  This
+means that 'Telephone' output can be tested without building a 'Report' to
 receive it.  Testing report content should be done traditionally.
 
 =head2 Headers
 
-The 'Report' class in this package for CSV files L<Log::Shiras::Report::CSVFile> 
-only adds the header to a file when it is new.  If the file connection 
-is dropped and then reconnected the header will not be added again if the 
+The 'Report' class in this package for CSV files L<Log::Shiras::Report::CSVFile>
+only adds the header to a file when it is new.  If the file connection
+is dropped and then reconnected the header will not be added again if the
 file is not empty.  It will also manage (or at least warn) on header drift.
 
 =head2 Custom formatting
 
-I wanted to be able to use method calls and code references when formatting 
-'Report' output.  The  
+I wanted to be able to use method calls and code references when formatting
+'Report' output.  The
 L<Log::Shiras::Report::ShirasFormat
-|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report/ShirasFormat.pm> 
-Role for the 'Report' class does just that.  While the API isn't as mature as 
+|http://search.cpan.org/~jandrew/Log-Shiras/lib/Log/Shiras/Report/ShirasFormat.pm>
+Role for the 'Report' class does just that.  While the API isn't as mature as
 Log4perl's 'PatternLayout' it does support full perl sprintf formatting.
 
 =head2 L<Moose|Moose::Manual>
 
-This package is Moose based.  You probably already have an opinion on Moose so this 
+This package is Moose based.  You probably already have an opinion on Moose so this
 may tip you one way or the other.
 
 =head2  Multiple output paths
 
-Allowing more than one destination from the same source is helpful.  This means 
-you can write your output to multiple sources without wiring up the connection until 
+Allowing more than one destination from the same source is helpful.  This means
+you can write your output to multiple sources without wiring up the connection until
 later.  See also L<Log::Dispatch>.
 
 =head2  Source filtering
 
-Excessive outputs for troubleshooting will overburden code.  Having a source filter 
-will allow the code to remain in source control (no retyping of print statements) 
+Excessive outputs for troubleshooting will overburden code.  Having a source filter
+will allow the code to remain in source control (no retyping of print statements)
 while still not burdening run time operations generally.
 
 =head2  Custom urgency levels
@@ -201,8 +201,8 @@ See L<Log::Shiras::TapWarn>
 
 =head2 Message meta data
 
-When messages are sent the switchboard bundles them with meta-data.  Mostly this 
-is basic stuff like where did I come from and when was I made.  For details 
+When messages are sent the switchboard bundles them with meta-data.  Mostly this
+is basic stuff like where did I come from and when was I made.  For details
 review L<Log::Shiras::Switchboard/master_talk( $args_ref )>
 
 =head1 Build/Install from Source
@@ -302,5 +302,5 @@ See individual modules
 =back
 
 =cut
-	
+
 #########1 main POD end      3#########4#########5#########6#########7#########8#########9
