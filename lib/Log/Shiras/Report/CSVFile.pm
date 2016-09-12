@@ -1,5 +1,5 @@
 package Log::Shiras::Report::CSVFile;
-use version; our $VERSION = version->declare("v0.38.4");
+use version; our $VERSION = version->declare("v0.40.2");
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTCSV );
 ###InternalReporTCSV	warn "You uncovered internal logging statements for Log::Shiras::Report::CSV-$VERSION" if !$ENV{hide_warn};
@@ -177,7 +177,7 @@ sub BUILD{
 			$self->_add_headers_to_file( $header_ref );
 		}
 	}
-	
+	#~ confess "Died here";
 	return 1;
 }
 
@@ -226,7 +226,7 @@ sub _open_file{
 	}
 	
 	# Get to the end for add_line (in case you weren't there before)
-	seek( $self->_get_file_handle, 0, SEEK_END);
+	seek( $self->_get_file_handle, 0, SEEK_END) or confess "Can't seek (end) on $file: $!";
 	
 	return 1;
 }
@@ -348,7 +348,7 @@ sub _add_headers_to_file{
 	
 	# Close the original file
 	flock( $original_fh, LOCK_UN );
-	close( $original_fh );
+	close( $original_fh ) or confess "Couldn't close file: $!";
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
 	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
 	###InternalReporTCSV		message =>[ "Closed the original file handle" ], } );

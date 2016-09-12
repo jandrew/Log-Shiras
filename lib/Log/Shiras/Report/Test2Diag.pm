@@ -1,4 +1,4 @@
-package Log::Shiras::Report::Test2Note;
+package Log::Shiras::Report::Test2Diag;
 use version; our $VERSION = version->declare("v0.40.2");
 use Data::Dumper;
 use Test2::Tools::Basic;
@@ -28,13 +28,13 @@ sub add_line{
 		$last_line = length( $last_line ) ? $last_line : "''";
 		$sprintf_string = "| level - %-6s | name_space - %-s\n| line  - %04d   | file_name  - %-s\n\t:( %s";
 	}
-	note sprintf( $sprintf_string, 
+	diag sprintf( $sprintf_string, 
 				$_[0]->{level}, $_[0]->{name_space},
 				$_[0]->{line}, $_[0]->{filename}, $first_line );
 	for my $middle_line ( @initial_list ){
-		note sprintf( "\t   %s", $middle_line );
+		diag sprintf( "\t   %s", $middle_line );
 	}
-	note sprintf( "\t   %s ):", $last_line ) if $last_line;
+	diag sprintf( "\t   %s ):", $last_line ) if $last_line;
 	
 	use warnings 'uninitialized';
 }
@@ -51,14 +51,14 @@ __END__
 
 =head1 NAME
 
-Log::Shiras::Report::Test2Note - Log::Shiras Test2 note output
+Log::Shiras::Report::Test2Diag - Log::Shiras Test2 diag output
 
 =head1 SYNOPSIS
 
 	use Test2::Bundle::Extended qw( !meta );
 	use Test2::Plugin::UTF8;
 	plan( ? );
-	use Log::Shiras::Report::Test2Note;
+	use Log::Shiras::Report::Test2Diag;
 	use Log::Shiras::Switchboard;
 	my( $switchboard, $test_class );
 	ok( lives{	my $switchboard = Log::Shiras::Switchboard->get_operator(
@@ -68,7 +68,7 @@ Log::Shiras::Report::Test2Note - Log::Shiras Test2 note output
 					},
 				},
 				reports =>{
-					log_file =>[ Log::Shiras::Report::Test2Note->new ], #Raise visibility to the actions being tested
+					log_file =>[ Log::Shiras::Report::Test2Diag->new ], #Raise visibility to the actions being tested
 				},) },						"Start the switchboard");
     
 =head1 DESCRIPTION

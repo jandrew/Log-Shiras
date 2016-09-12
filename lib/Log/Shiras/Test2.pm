@@ -1,5 +1,5 @@
 package Log::Shiras::Test2;
-use version 0.77; our $VERSION = version->declare("v0.38.4");
+use version 0.77; our $VERSION = version->declare("v0.40.2");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGShiraSTesT );
 ###InternalLoGShiraSTesT	warn "You uncovered internal logging statements for Log::Shiras::Test2-$VERSION";

@@ -74,7 +74,7 @@ is			$test_instance->set_log_space( 'New::Space' ), 'New::Space',
 										"Change the log_space";
 is			$test_instance->get_log_space, 'New::Space',
 										"Check that the new log_space can be retrieved";
-is			$test_instance->get_all_space, 'New::Space::ClassSpace',
+is			$test_instance->get_all_space( 'sub' ), 'New::Space::ClassSpace::sub',
 										"Check that the new 'all log_space' (with class space) can be retrieved";
 note	 								"...Test Done";
 done_testing();
