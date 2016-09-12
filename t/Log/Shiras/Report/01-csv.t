@@ -27,6 +27,7 @@ BEGIN{
 	}
 	use Carp 'longmess';
 	$SIG{__WARN__} = sub{ note longmess $_[0]; };
+	$SIG{__DIE__} = sub{ diag longmess $_[0]; };
 }
 $| = 1;
 use MooseX::ShortCut::BuildInstance qw( build_class );
@@ -38,7 +39,7 @@ use lib $lib,;
 use Log::Shiras::Switchboard;
 use Log::Shiras::Telephone;
 use Log::Shiras::Report::CSVFile;
-use	Log::Shiras::Report::Test2Note;
+use	Log::Shiras::Report::Test2Diag;
 use Log::Shiras::TapWarn;
 my  		@attributes = qw(
 				file					headers					reconcile_headers
@@ -118,7 +119,7 @@ ok			$name_space_ref = {
 				},
 			},							"Build initial sources for testing";
 ok 			$report_ref = {
-###InternalReporTCSV		log_file =>[ Log::Shiras::Report::Test2Note->new ], #Raise visibility to the actions being tested
+###InternalReporTCSV		log_file =>[ Log::Shiras::Report::Test2Diag->new ], #Raise visibility to the actions being tested
 			},							"Build initial reports for testing";
 ok( lives{
 			$ella_peterson = Log::Shiras::Switchboard->get_operator(
@@ -126,13 +127,13 @@ ok( lives{
 				reports	=> 	$report_ref,
 			)
 	},									"Get a switchboard operator (with settings)")
-										or note($@);
+										or diag($@);
 ok( lives{	$csv_class = build_class(
 				package => 'CSVFile::Class',
 				superclasses => [ 'Log::Shiras::Report::CSVFile' ],
 			);
 	},									"Build a CSVFile class")
-										or note($@);
+										or diag($@);
 map{
 has_attribute_ok
 			$csv_class, $_,			"Check that the new instance has the -$_- attribute",
@@ -142,22 +143,22 @@ can_ok		$csv_class, $_,
 }			@methods;
 ok( lives{	$csv_instance = $csv_class->new( file => $file_name_1 ) },
 										"Build a CSVFile instance - and auto vivify the file")
-										or note($@);
+										or diag($@);
 ok				-f $file_name_1,		"Check that the file exists";
 is				$csv_instance = undef, undef,
 										"Close the CSVFile";
 ok( lives{		unlink( $file_name_1 ) or die $! },
 										"Delete the test CSVFile: $file_name_1")
-										or note($@);
+										or diag($@);
 ok( lives{	$temp_file = $temp_dir . '/csv_header.csv';
 			copy( $file_name_2, $temp_file ); },
 										"Copy the file to the temp directory: $temp_file")
-										or note($@);
+										or diag($@);
 ok( lives{	$csv_instance = 	$csv_class->new(
 									file => $temp_file,
 									headers =>[ 'my', 'header', 'test', 'Value Header' ],
 								) },	"Build a CSVFile instance - with a pre-built file containing data")
-										or note($@);
+										or diag($!);
 is				$csv_instance->get_headers, ['my', 'header', 'test', 'value_header', ],
 										"...and insure that the headers match the request not the file";
 is				$csv_instance->set_headers( [ 'Some', 'Different Header', 'header' ], ),
@@ -187,12 +188,12 @@ is				$csv_instance = undef, undef,
 file_line_count_is( $temp_file, 4,		"Check for the expected number of lines in the file");
 ok( lives{	$temp_file = $temp_dir . '/empty_file.csv'; },
 										"Build a new temp file name: $temp_file")
-										or note($@);
+										or diag($@);
 ok( lives{	$csv_instance = 	$csv_class->new(
 									file => $temp_file,
 									headers =>[ 'my', 'header', 'test', 'Value Header' ],
 								) },	"Build a new CSVFile instance - with requested headers in an empty file: $temp_file")
-										or note($@);
+										or diag($@);
 is				$csv_instance->add_line( { message =>[{ my => 'here', header => 'is', test => 'another', new_header => 'test line' }] } ), 1,
 										"Add a test line with an unmatched header a sufficient number of columns";
 $test_class->match_message( 'warn_log', qr/Adding headers from the first hashref \( new_header \)/,
@@ -208,11 +209,11 @@ is				$csv_instance = undef, undef,
 file_line_count_is( $temp_file, 4,		"Check for the expected number of lines in the file");
 ok( lives{	$temp_file = $temp_dir . '/another_file.csv'; },
 										"Build a new temp file name: $temp_file")
-										or note($@);
+										or diag($@);
 ok( lives{	$csv_instance = 	$csv_class->new(
 									file => $temp_file,
 								) },	"Build a new CSVFile instance - with out headers: $temp_file")
-										or note($@);
+										or diag($@);
 is				$csv_instance->add_line( { message =>[qw( A new line in the file )] } ), 1,
 										"Add a test line (via array ref) to a file with no headers";
 $test_class->match_message( 'warn_log', qr/Setting dummy headers \( header_0, header_1, header_2, header_3, header_4, header_5 \)/,
@@ -222,11 +223,11 @@ is				$csv_instance = undef, undef,
 file_line_count_is( $temp_file, 2,		"Check for the expected number of lines in the file");
 ok( lives{	$temp_file = $temp_dir . '/hashref_file.csv'; },
 										"Build a new temp file name: $temp_file")
-										or note($@);
+										or diag($@);
 ok( lives{	$csv_instance = 	$csv_class->new(
 									file => $temp_file,
 								) },	"Build a new CSVFile instance - with out headers to add hashrefs: $temp_file")
-										or note($@);
+										or diag($@);
 is				$csv_instance->add_line( { message =>[{ header_1 => 'new', header_2 => 'row', header_3 => 'value' }] } ), 1,
 										"Add a test line (via hash ref) to a file with no headers";
 $test_class->match_message( 'warn_log', qr/Adding headers from the first hashref \( header_/,# All three not shown since hashrefs are order independant

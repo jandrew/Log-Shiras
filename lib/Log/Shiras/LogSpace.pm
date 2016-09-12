@@ -1,5 +1,5 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.38.4");
+use version; our $VERSION = version->declare("v0.40.2");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
 ###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
@@ -24,10 +24,13 @@ has log_space =>(
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
 
 sub get_all_space{
-	my ( $self ) = @_;
+	my ( $self, $add_string ) = @_;
 	my	$all_space = $self->get_log_space;
 	if( $self->can( 'get_class_space' ) and length( $self->get_class_space ) > 0 ){
 		$all_space .= '::' . $self->get_class_space;
+	}
+	if( $add_string and length( $add_string ) > 0 ){
+		$all_space .= '::' . $add_string;
 	}
 	return $all_space;
 }
@@ -55,8 +58,6 @@ Log::Shiras::LogSpace - Log::Shiras Role for runtime name-spaces
 
 	use Modern::Perl;
 	use MooseX::ShortCut::BuildInstance qw( build_class );
-	use	lib
-			'../lib',;
 	use Log::Shiras::LogSpace;
 	my $test_instance = build_class(
 			package => 'Generic',
@@ -65,7 +66,7 @@ Log::Shiras::LogSpace - Log::Shiras Role for runtime name-spaces
 				get_class_space => sub{ 'ExchangeStudent' },
 				i_am => sub{
 					my( $self )= @_;
-					print "I am a: " . $self->get_all_space . "\n";
+					print "I identify as a: " . $self->get_all_space( 'individual' ) . "\n";
 				}
 			},
 		);
@@ -78,9 +79,9 @@ Log::Shiras::LogSpace - Log::Shiras Role for runtime name-spaces
 
 	#######################################################################################
 	# Synopsis Screen Output
-	# 01: I am a: Generic::ExchangeStudent
-	# 02: I am a: French::ExchangeStudent
-	# 03: I am a: Spanish::ExchangeStudent
+	# 01: I identify as a: Generic::ExchangeStudent::individual
+	# 02: I identify as a: French::ExchangeStudent::individual
+	# 03: I identify as a: Spanish::ExchangeStudent::individual
 	#######################################################################################
 
 =head1 DESCRIPTION
@@ -162,19 +163,20 @@ B<Definition:> predicate test for the attribute
 
 =head2 Method
 
-=head3 get_all_space
+=head3 get_all_space( $add_string )
 
 =over
 
 B<Definition:> This method collects the stored 'log_space' attribute value and then
 joins it with the results of a method call to 'get_class_space'.  The 'get_class_space'
 attribute should be provided somewhere else in the class.  The two values are joined with
-'::'.
+'::'.  It will additionally join another string argument passed as $add_string to form a 
+complete log space stack. See synopsis.
 
-B<Accepts> nothing
+B<Accepts> $add_string
 
-B<Returns> log_space . '::' . $self->get_class_space or just log_space if there is no
-return from 'get_class_space'
+B<Returns> log_space . '::' . $self->get_class_space . '::' . $add_string as each element 
+is available.
 
 =back
 

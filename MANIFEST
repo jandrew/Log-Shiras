@@ -25,6 +25,7 @@ lib/Log/Shiras/Report.pm
 lib/Log/Shiras/Report/CSVFile.pm
 lib/Log/Shiras/Report/MetaMessage.pm
 lib/Log/Shiras/Report/Stdout.pm
+lib/Log/Shiras/Report/Test2Diag.pm
 lib/Log/Shiras/Report/Test2Note.pm
 lib/Log/Shiras/Switchboard.pm
 lib/Log/Shiras/TapPrint.pm

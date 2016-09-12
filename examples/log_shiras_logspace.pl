@@ -10,7 +10,7 @@ my $test_instance = build_class(
 			get_class_space => sub{ 'ExchangeStudent' },
 			i_am => sub{
 				my( $self )= @_;
-				print "I am a: " . $self->get_all_space . "\n";
+				print "I identify as a: " . $self->get_all_space( 'individual' ) . "\n";
 			}
 		},
 	);
