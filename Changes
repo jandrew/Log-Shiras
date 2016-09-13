@@ -11,7 +11,8 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 {{$NEXT}}
 
-	* Another cool change
+	+ Additional POD changes
+	! Updated Text::CSV_XS requirements to 1.25 to possibly handle some perl 5.10 fails with Autoloader
 
 v0.40.2   2016-09-12 14:31:20-07:00 America/Los_Angeles
 

@@ -1,5 +1,5 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.40.2");
+use version; our $VERSION = version->declare("v0.42.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
 ###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
@@ -109,8 +109,11 @@ look something like this;
 
 In this case if you used my cool package instances with the log_space set to different
 values then only the namespace unblocked for 'FirstInstance::MyCoolPackage::my_cool_sub'
-would report.  In the case where no sub 'get_class_space' is available the call to
-L<get_all_space|/get_all_space> will return the same value as 'get_log_space'.
+would report.  See the documentation for L<get_all_space|/get_all_space> for details.
+
+As a general rule it works best if the subroutine 'get_class_space' is defined in an object 
+class file (not a role file).  Each subroutine space can be identified with the $add_string 
+passed to get_all_space.
 
 =head2 Attributes
 
@@ -123,7 +126,6 @@ this attribute see the listed L<attribute methods|/attribute methods>.
 
 B<Definition:> This will be the base log_space element returned by L<get_all_space
 |/get_all_space>
-
 
 B<Default> the consuming package name
 

@@ -51,7 +51,7 @@ my %WriteMakefileArgs = (
     "MooseX::Types::Moose" => 0,
     "Test2::API" => 0,
     "Test2::Tools::Basic" => 0,
-    "Text::CSV_XS" => 0,
+    "Text::CSV_XS" => "1.25",
     "constant" => 0,
     "if" => 0,
     "lib" => 0,
@@ -69,7 +69,7 @@ my %WriteMakefileArgs = (
     "Test::File" => 0,
     "Test::Moose" => 0
   },
-  "VERSION" => "v0.40.2",
+  "VERSION" => "v0.42.0",
   "test" => {
     "TESTS" => "t/Log/Shiras/*.t t/Log/Shiras/Report/*.t"
   }
@@ -112,7 +112,7 @@ my %FallbackPrereqs = (
   "Test2::Tools::Basic" => 0,
   "Test::File" => 0,
   "Test::Moose" => 0,
-  "Text::CSV_XS" => 0,
+  "Text::CSV_XS" => "1.25",
   "constant" => 0,
   "if" => 0,
   "lib" => 0,

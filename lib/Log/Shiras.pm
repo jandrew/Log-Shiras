@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.40.2");
+use version 0.77; our $VERSION = version->declare("v0.42.0");
 use utf8;
 #########1 main pod docs      3#########4#########5#########6#########7#########8#########9
 __END__
@@ -184,9 +184,9 @@ may tip you one way or the other.
 
 =head2  Multiple output paths
 
-Allowing more than one destination from the same source is helpful.  This means
-you can write your output to multiple sources without wiring up the connection until
-later.  See also L<Log::Dispatch>.
+Allowing more than one destination using the same logging software in a script space
+is helpful.  This means you can write your output to multiple sources without wiring
+up the connection until later.  See also L<Log::Dispatch>.
 
 =head2  Source filtering
 
@@ -233,15 +233,11 @@ B<3.> Change (cd) into the extracted directory.
 
 B<4.> Run the following
 
-=over
-
 (For Windows find what version of make was used to compile your perl)
 
 	perl  -V:make
 
 (for Windows below substitute the correct make function (s/make/dmake/g)?)
-
-=back
 
 	>perl Makefile.PL
 
