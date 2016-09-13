@@ -1,5 +1,5 @@
 package Log::Shiras::Report::CSVFile;
-use version; our $VERSION = version->declare("v0.40.2");
+use version; our $VERSION = version->declare("v0.42.0");
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTCSV );
 ###InternalReporTCSV	warn "You uncovered internal logging statements for Log::Shiras::Report::CSV-$VERSION" if !$ENV{hide_warn};
@@ -8,7 +8,7 @@ use utf8;
 use Moose;
 use MooseX::StrictConstructor;
 use MooseX::HasDefaults::RO;
-use Text::CSV_XS;
+use Text::CSV_XS 1.25;
 use File::Copy qw( copy );
 use File::Temp;
 #~ $File::Temp::DEBUG = 1;
