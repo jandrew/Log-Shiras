@@ -1,5 +1,5 @@
 package Log::Shiras::TapWarn;
-use version; our $VERSION = version->declare("v0.42.0");
+use version; our $VERSION = version->declare("v0.42.2");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTaPWarN );
 ###InternalTaPWarN	warn "You uncovered internal logging statements for Log::Shiras::TapWarn-$VERSION" if !$ENV{hide_warn};
@@ -11,6 +11,8 @@ Moose::Exporter->setup_import_methods(
 );
 use MooseX::Types::Moose qw( HashRef );
 use Carp 'longmess';
+use strict;
+use warnings;
 use lib '../../../lib';
 use Log::Shiras::Switchboard;
 our	$switchboard = Log::Shiras::Switchboard->instance;

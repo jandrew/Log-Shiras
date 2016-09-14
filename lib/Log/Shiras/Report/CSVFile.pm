@@ -1,5 +1,5 @@
 package Log::Shiras::Report::CSVFile;
-use version; our $VERSION = version->declare("v0.42.0");
+use version; our $VERSION = version->declare("v0.42.2");
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTCSV );
 ###InternalReporTCSV	warn "You uncovered internal logging statements for Log::Shiras::Report::CSV-$VERSION" if !$ENV{hide_warn};

@@ -132,7 +132,7 @@ I borrowed heavily from them when writing this.
 
 Why choose this Logger over one of the many other options?  Here are some implementation
 decisions that I made that may or may not help that decision.  Many if not all of these
-elements exist in other loggers.  I don't think they all exist together an any other
+elements exist in other loggers.  I don't think they all exist together in any other
 logger.
 
 =head2 Buffer behavior
@@ -151,11 +151,12 @@ are sent as well as being more flexible in allowing the format of sent messages.
 =head2 L<Log::Shiras::Test2>
 
 A dedicated test module for testing logged messages that will capture messages at
-the switchboard level rather than requiring a connection to the final destination
-of the report to review output.  This leverages the buffering behavior above.
-The test methods include several ways of checking for output existence.  This
-means that 'Telephone' output can be tested without building a 'Report' to
-receive it.  Testing report content should be done traditionally.
+the switchboard level rather than requiring the implementation of the final report
+destination to test output.  Specifically, implementation of L<Telephone
+|Log::Shiras::Telephone> code can be tested without also implementing L<Report
+|Log::Shiras::Reports> code.  This is done through a hook built into the L<Switchboard
+|Log::Shiras::Switchboard>. The test methods include several ways of checking for
+output existence.  I<Testing report implementation should be done traditionally.>
 
 =head2 Headers
 
@@ -189,7 +190,7 @@ up the connection until later.  See also L<Log::Dispatch>.
 Excessive outputs for troubleshooting will overburden code.  Having a source filter
 will allow the code to remain in source control (no retyping of print statements)
 while still not burdening run time operations generally.  See also
-L<Log::Log4perl::Resurrector>
+L<Smart::Comments> and L<Log::Log4perl::Resurrector>
 
 =head2  Custom urgency levels
 
