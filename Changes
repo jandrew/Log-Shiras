@@ -11,6 +11,15 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 {{$NEXT}}
 
+	* Another cool change
+
+v0.42.2   2016-09-14 11:42:06-07:00 America/Los_Angeles
+
+	+ Additional POD changes
+	+ Added use strict and use warnings for all non Moose and Moose::Role classes for Kwalitee fails
+
+v0.42.0   2016-09-13 12:20:53-07:00 America/Los_Angeles
+
 	+ Additional POD changes
 	! Updated Text::CSV_XS requirements to 1.25 to possibly handle some perl 5.10 fails with Autoloader
 

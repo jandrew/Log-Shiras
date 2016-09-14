@@ -1,10 +1,12 @@
 package Log::Shiras::Switchboard;
-use version 0.77; our $VERSION = version->declare("v0.42.0");
+use version 0.77; our $VERSION = version->declare("v0.42.2");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalSwitchboarD );
 ###InternalSwitchboarD	warn "You uncovered internal logging statements for Log::Shiras::Switchboard-$VERSION" if !$ENV{hide_warn};
 use 5.010;
 use utf8;
+use strict;
+use warnings;
 use MooseX::Singleton;
 use MooseX::StrictConstructor;
 use MooseX::HasDefaults::RO;

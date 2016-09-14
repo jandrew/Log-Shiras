@@ -1,7 +1,9 @@
 package Log::Shiras::Report::Test2Diag;
-use version; our $VERSION = version->declare("v0.42.0");
+use version; our $VERSION = version->declare("v0.42.2");
 use Data::Dumper;
 use Test2::Tools::Basic;
+use strict;
+use warnings;
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
 
