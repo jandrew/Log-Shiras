@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.42.2");
+use version 0.77; our $VERSION = version->declare("v0.42.4");
 use utf8;
 use strict;
 use warnings;

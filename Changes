@@ -13,6 +13,10 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.42.4   2016-09-14 22:14:39-07:00 America/Los_Angeles
+
+	+ Syntax change for one line of dubug code
+
 v0.42.2   2016-09-14 11:42:06-07:00 America/Los_Angeles
 
 	+ Additional POD changes

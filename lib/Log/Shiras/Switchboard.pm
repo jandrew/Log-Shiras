@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version 0.77; our $VERSION = version->declare("v0.42.2");
+use version 0.77; our $VERSION = version->declare("v0.42.4");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalSwitchboarD );
 ###InternalSwitchboarD	warn "You uncovered internal logging statements for Log::Shiras::Switchboard-$VERSION" if !$ENV{hide_warn};
@@ -680,7 +680,7 @@ sub _add_carp_stack{
 	delete $data_ref->{carp_stack};
 	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => '0',
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_add_carp_stack',
-	###InternalSwitchboarD		message =>[ "Added longmess to the data ref: ", $data_ref->{message} ], } );
+	###InternalSwitchboarD		message =>[ "Longmess test complete with message: ", $data_ref->{message} ], } );
 	return $data_ref;
 }
 
