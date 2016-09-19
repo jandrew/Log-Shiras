@@ -1,6 +1,6 @@
 package Log::Shiras::Switchboard;
-use version 0.77; our $VERSION = version->declare("v0.42.2");
-#~ use lib '../../';
+use version 0.77; our $VERSION = version->declare("v0.44.0");
+use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalSwitchboarD );
 ###InternalSwitchboarD	warn "You uncovered internal logging statements for Log::Shiras::Switchboard-$VERSION" if !$ENV{hide_warn};
 use 5.010;
@@ -22,7 +22,6 @@ use Data::Dumper;
 use lib
 		'lib',
 		'../lib',
-		'../../',
 		;
 use MooseX::ShortCut::BuildInstance v1.44 qw( build_instance should_re_use_classes );
 should_re_use_classes( 1 );
@@ -240,12 +239,6 @@ sub master_talk{
 		$self->_set_message_recursion_block( $recursion );# Early return so cleanup needed
 		return -3;
 	}
-
-	# Handle fatal
-	###InternalSwitchboarD	warn 'Checking if this is a fatal message' if TALK_DEBUG;
-	my $fatality = $self->_is_fatal( $data_ref, $recursion );
-	confess $fatality if $fatality;
-	###InternalSwitchboarD	warn 'The message was not fatal!' if TALK_DEBUG;
 
 	### Add some meta_data
 	# Add message time
@@ -593,40 +586,6 @@ sub _can_communicate{
 	return $pass;
 }
 
-sub _is_fatal{
-	my ( $self, $data_ref, $recursion ) = @_;
-	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
-	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_is_fatal',
-	###InternalSwitchboarD		message =>[ "Arrived at _is_fatal to see if urgency -$data_ref->{level}- equals fatal", ], } );
-	my $fatality;
-	if( $data_ref->{level} =~ /fatal/i){
-		my @join_list;
-		map{ push @join_list, $_ if $_ } @{$data_ref->{message}};
-		my $length = length( join( '', @join_list ));
-		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 3,
-		###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_is_fatal',
-		###InternalSwitchboarD		message =>[ "Checking which message to send based on joined message length: $length", ], } );
-		$self->_set_message_recursion_block( $recursion );# Early return so cleanup needed (for the case of an eval'd fatal)
-		if(!$data_ref->{message} or $length == 0 ){
-			$fatality =  "Fatal call sent to the switchboard";
-		}else{
-			my $i = 0;
-			for my $element ( @{$data_ref->{message}} ){
-				if( !$element ){
-				}elsif( $i ){
-					$fatality .= "\n" . ( ref $element ? Dumper( $element ) : $element );
-					$i++;
-				}else{
-					$fatality = "\n" . ( ref $element ? Dumper( $element ) : $element );
-					$i++;
-				}
-			}
-			$fatality .= "<- sent at a 'fatal' level";
-		}
-	}
-	return $fatality;
-}
-
 sub _add_caller{
 	my ( $self, $data_ref ) = @_;
 	my $level = 2;
@@ -680,7 +639,7 @@ sub _add_carp_stack{
 	delete $data_ref->{carp_stack};
 	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => '0',
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_add_carp_stack',
-	###InternalSwitchboarD		message =>[ "Added longmess to the data ref: ", $data_ref->{message} ], } );
+	###InternalSwitchboarD		message =>[ "Longmess test complete with message: ", $data_ref->{message} ], } );
 	return $data_ref;
 }
 
@@ -765,6 +724,9 @@ sub _really_report{
 			$report->add_line( $report_ref );
 			$x++;
 		}
+		###InternalSwitchboarD	warn 'Checking if this is a fatal message' if TALK_DEBUG;
+		$self->_is_fatal( $report_ref );
+		###InternalSwitchboarD	warn 'The message was not fatal!' if TALK_DEBUG;
 	}else{
 		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 1,
 		###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_really_report',
@@ -774,6 +736,39 @@ sub _really_report{
 	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_really_report',
 	###InternalSwitchboarD		message =>[ "Message was reported -$x- times" ], } );
 	return $x;
+}
+
+sub _is_fatal{
+	my ( $self, $data_ref ) = @_;#, $recursion
+	###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 2,
+	###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_is_fatal',
+	###InternalSwitchboarD		message =>[ "Arrived at _is_fatal to see if urgency -$data_ref->{level}- equals fatal", ], } );
+	if( $data_ref->{level} =~ /fatal/i ){
+		###InternalSwitchboarD	$self->master_talk( { report => 'log_file', level => 3,
+		###InternalSwitchboarD		name_space => 'Log::Shiras::Switchboard::master_talk::_is_fatal',
+		###InternalSwitchboarD		message =>[ "Checking which message to send based on the message content:",  $data_ref->{message} ], } );
+		#~ $self->_set_message_recursion_block( $recursion );# Early return so cleanup needed (for the case of an eval'd fatal)
+		my $fatality = '';
+		my $empty = "Fatal call sent to the switchboard";
+		if(!$data_ref->{message} ){
+			$fatality = $empty;
+		}else{
+			my $i = 0;
+			for my $element ( @{$data_ref->{message}} ){
+				if( !$element or length( $element ) == 0 ){
+				}elsif( $i ){
+					$fatality .= "\n" . ( ref $element ? Dumper( $element ) : $element );
+					$i++;
+				}else{
+					$fatality = "\n" . ( ref $element ? Dumper( $element ) : $element );
+					$i++;
+				}
+			}
+			$fatality .= length( $fatality ) > 0 ? "<- sent at a 'fatal' level" : $empty ;
+		}
+		confess( $fatality );
+	}
+	return 1;
 }
 
 sub _get_block_unblock_levels{
@@ -1238,16 +1233,16 @@ B<Example>
 	}
 
 B<fatal> The Switchboard will L<confess|Carp/confess> for all messages sent with a
-priority or urgency level that matches qr/fatal/i.  The switchboard will check for
-permissions to pass the fatal message but will not take any other actions prior to
-sending the 'message' with a confess stack and dying.  'fatal' can be set anywhere in
-the custom priority list from lowest to highest but fatal is the only one that will die.
-(priorities higher than fatal will not die) B<But>, if the message is blocked for the
-message I<name-space, report, and level> then the code will NOT die.>  If 'fatal' is
-the requested level from the caller but it is not on the (custom) list for the report
-desination then the priority of the message drops to 0 and 0 position urgencies must
-be accepted for the report to die. (even if the listed level at the 0 position is not
-'fatal').
+priority or urgency level that matches qr/fatal/i.  The switchboard will fully dispatch 
+the message to it's intended report(s) prior to confessing the message.  At this point 
+the script will die.  If the message is not approved (even at the fatal level) then 
+nothing happens.  'fatal' can be set anywhere in the custom priority list from lowest 
+to highest but fatal is the only string that will die.  (priorities higher than fatal 
+will not die) B<But>, if the message is blocked for the message I<name-space, report, 
+and level> then the code will NOT die.>  If 'fatal' is the requested level from the 
+caller but it is not on the (custom) list for the report desination then the priority 
+of the message drops to 0 (trace equivalent) and that level of urgencie must be accepted 
+for the report to die. (even if the listed level at the 0 position is not 'fatal').
 
 =back
 
@@ -1389,17 +1384,8 @@ with him.  Like the Telephone repairman's phone it plugs in directly to the swit
 in the repairmains case into a telephone line) and is a bit trickier to operate than absolutely
 necessary.  For a nicer message sending interface see L<Log::Shiras::Telephone>.  When the
 $args_ref message is received the switchboard will check the L<name_space_bounds
-|/name_space_bounds> permissions and then test;
-
-	$args_ref->{level} =~ /fatal/i
-
-If the message passes those two tests then it will attach metadata to to the $args_ref.  It
-should be noted that the reaction to matching level to fatal is to confess (L<Carp>) each
-element of the {message} ArrayRef.  Any message buffering is then handled or the message is
-sent to the report name and each report in that name-space receives the $args_ref as the
-arguments to a call $report->add_line( $args_ref ).
-
-The metadata attached to the message is a follows
+|/name_space_bounds> permissions.  If the message passes that test then it will attach metadata 
+to to the $args_ref.  The metadata attached to the message is a follows;
 
 	date_time => The date and time the message was sent in CLDR format of 'yyyy-MM-dd hh:mm:ss'
 
@@ -1407,7 +1393,17 @@ The metadata attached to the message is a follows
 
 	filename => The (full) file name of the message source
 
-	line => The line number of the message source
+	line => The line number of the message sourceIf  and then test;
+	
+Any L<message buffering|/all_buffering> is then handled or the message is sent to the report 
+name and each report in that name-space receives the $args_ref as the arguments to a call 
+$report->add_line( $args_ref ).  When that is complete the message is checked to see if it 
+is fatal;
+
+	$args_ref->{level} =~ /fatal/i
+
+I<If the message was buffered first the script will not die until the message was flushed into 
+the report from the buffer.>
 
 B<Returns:> The number of times the add_line call was made.  There are some special cases.
 

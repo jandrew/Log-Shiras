@@ -1,5 +1,5 @@
 package Log::Shiras::Telephone;
-use version; our $VERSION = version->declare("v0.42.2");
+use version; our $VERSION = version->declare("v0.44.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTelephonE );
 ###InternalTelephonE	warn "You uncovered internal logging statements for Log::Shiras::Telephone-$VERSION" if !@$ENV{hide_warn};
@@ -10,6 +10,7 @@ use	MooseX::StrictConstructor;
 use	MooseX::HasDefaults::RO;
 use MooseX::Types::Moose qw( Bool ArrayRef HashRef Str );
 use Carp qw( longmess );
+use Clone 'clone';
 use lib '../../../lib',;
 use Log::Shiras::Switchboard;
 my	$switchboard = Log::Shiras::Switchboard->instance;
@@ -151,11 +152,11 @@ sub talk{
 	###InternalTelephonE		message	=> [ "Message reported |$report_count| times" ], } );
 
 	# Handle fail_over
-	if( $report_count == 0 and ( $data_ref->{fail_over} or $self->should_fail_over) ){
+	if( $report_count < 1 and ( $data_ref->{fail_over} or $self->should_fail_over) ){
 		###InternalTelephonE	$switchboard->master_talk( { report => 'log_file', level => 4,
 		###InternalTelephonE		name_space => 'Log::Shiras::Telephone::talk',
 		###InternalTelephonE		message	=> [ "Message allowed but found no destination!", $data_ref->{message} ], } );
-		warn longmess( "This message sent to the report -$data_ref->{report}- was approved but found no destination objects to use" );
+		warn longmess( "This message sent to the report -$data_ref->{report}- was approved but found no destination objects to use" ) if !$ENV{hide_warn};
 		print STDOUT join( "\n\t", @{$data_ref->{message}} ) . "\n";
 	}
 
@@ -274,24 +275,24 @@ a more informative output set.
 
 =head1 DESCRIPTION
 
-This is a convenience wrapper for the L<Switchboard|Log::Shiras::Switchboard> method
-L<master_talk|Log::Shiras::Switchboard/master_talk( $args_ref )>.  It also provides some
+This is a convenience wrapper for the method 
+L<Log::Shiras::Switchboard/master_talk( $args_ref )>.  It also provides some
 additional function not provided in the leaner and stricter master_talk method.  First,
 the input is more flexible allowing for several ways to compose the message.  Second,
 most of the L<Attributes|/Attributes> of a phone are sent as the key parts of a
 message ref for to the Switchboard.  Each of these attributes has a default allowing for
 them to be ommited from the phone L<talk|/talk( %args )> method call. Third, the phone has
-and additional attribute L<fail_over|/fail_over> which can be used to trigger printing the
+an additional attribute L<fail_over|/fail_over> which can be used to trigger printing the
 message when it is cleared by the switchboard but a report object isn't built yet.  This
 will allow for development work on writing messages without having to predefine the full
 output destination.  Finally, built into 'talk' is the ability to request input with the
 'ask' key. This is done without accessing the Switchboard.  This creates a range of uses
 for the 'talk' command.  It is possible to call 'talk' with no arguments and only collect
-the metadata for that script point to be sent to a destination log.  Another possiblity
-is to call talk with some of the attribute settings changed for that 'talk' command only.
-When a 'talk' command receives values to replace the attributes they are in force for
-that call of the 'talk' method only.  Updating the default $phone attributes are done
-with the L<attribute methods|/attribute methods>.
+the metadata for that script point to be sent to a destination log.  Any talk command 
+merges the response into the message.
+
+Updating the default $phone attributes are done with the L<attribute methods
+|/attribute methods>.
 
 Please note the effect of calling level => 'fatal' documented in
 L<Log::Shiras::Switchboard/logging_levels>

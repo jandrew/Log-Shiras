@@ -1,5 +1,5 @@
 package Log::Shiras::Types;
-use version; our $VERSION = version->declare("v0.42.2");
+use version; our $VERSION = version->declare("v0.44.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTypeSShirasFormat :InternalTypeSFileHash :InternalTypeSReportObject :InternalTypeSHeadeR);
 ###InternalTypeSShirasFormat	use Data::Dumper;
@@ -319,8 +319,7 @@ subtype JsonFile, as Str,
 	where{ $_ =~ $jsonextention and -f $_ },
 	message{ $_ };
 
-subtype FileHash, as HashRef,
-	message{ $_ };
+subtype FileHash, as HashRef;
 ###InternalTypeSFileHash	warn "You uncovered internal logging statements for the Type FileHash in Log::Shiras::Types-$VERSION" if !$ENV{hide_warn};
 coerce FileHash, from YamlFile,
 	via{

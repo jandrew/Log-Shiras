@@ -1,12 +1,13 @@
 package Log::Shiras::Report::Stdout;
-use version; our $VERSION = version->declare("v0.42.2");
+use version; our $VERSION = version->declare("v0.44.0");
+use 5.010;
+use utf8;
+use Moose;
+use namespace::autoclean;
+use MooseX::StrictConstructor;
 use Data::Dumper;
-use strict;
-use warnings;
 
 #########1 Public Methods     3#########4#########5#########6#########7#########8#########9
-
-sub new{ bless {}, shift; }
 
 sub add_line{
 	shift;
@@ -32,6 +33,8 @@ sub add_line{
 
 
 #########1 Phinish    	      3#########4#########5#########6#########7#########8#########9
+
+__PACKAGE__->meta->make_immutable;
 
 1;
 # The preceding line will help the module return a true value

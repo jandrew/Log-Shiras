@@ -1,5 +1,5 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.42.2");
+use version; our $VERSION = version->declare("v0.44.0");
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
 ###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
@@ -17,7 +17,7 @@ has log_space =>(
 		predicate	=> 'has_log_space',
 		default	=> sub{
 			my( $self ) = @_;
-			return ref $self;
+			return ref $self ? ref( $self ) : $self;# Handle class calls too
 		}
 	);
 

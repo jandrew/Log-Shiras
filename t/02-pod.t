@@ -3,12 +3,12 @@
 ### Test that the pod files run
 use Test2::Bundle::Extended qw( !meta );
 use Test2::Plugin::UTF8;
-plan( 15 );
+plan( 17 );
 use Test::Pod 1.48;
 my	$up		= '../';
 for my $next ( <*> ){
 	if( ($next eq 't') and -d $next ){
-		### <where> - found the t directory - must be using prove ...
+		note "Found the t directory - must be using prove";
 		$up	= '';
 		last;
 	}
@@ -39,7 +39,11 @@ pod_file_ok( $up . 	'lib/Log/Shiras/Report/CSVFile.pm',
 						"The Log::Shiras::Report::CSVFile file has good POD" );
 pod_file_ok( $up . 	'lib/Log/Shiras/Report/Test2Note.pm',
 						"The Log::Shiras::Report::Test2Note file has good POD" );
+pod_file_ok( $up . 	'lib/Log/Shiras/Report/Test2Diag.pm',
+						"The Log::Shiras::Report::Test2Diag file has good POD" );
 pod_file_ok( $up . 	'lib/Log/Shiras/Report/Stdout.pm',
 						"The Log::Shiras::Report::Stdout file has good POD" );
 pod_file_ok( $up . 	'lib/Log/Shiras/Report/MetaMessage.pm',
 						"The Log::Shiras::Report::MetaMessage file has good POD" );
+pod_file_ok( $up . 	'lib/Log/Shiras/Report/PostgreSQL.pm',
+						"The Log::Shiras::Report::PostgreSQL file has good POD" );
