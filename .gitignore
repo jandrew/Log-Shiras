@@ -4,3 +4,5 @@ Log-Shiras*/
 *.tar.gz
 DevelopmentNotes.txt
 Makefile.old
+*postgresql*
+*PostgreSQL*

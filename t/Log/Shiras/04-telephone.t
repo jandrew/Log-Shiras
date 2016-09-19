@@ -37,6 +37,7 @@ use Log::Shiras::Report::Test2Note;
 use Log::Shiras::Switchboard;
 use Log::Shiras::Telephone;
 use Log::Shiras::Test2;
+use Log::Shiras::Report::Test2Note;
 my(
 			$ella_peterson, 		$name_space_ref,		$report_ref,
 			$test_class,			$main_phone,	
@@ -120,7 +121,7 @@ ok 			$report_ref = {
 				run	=> [], # Sending empty reports since it is not tested here
 				#~ log_file =>[ Log::Shiras::Report::Test2Note->new ], #Raise visibility to the actions being tested
 				#~ report1 =>[ Log::Shiras::Report::Test2Note->new ], #Raise visibility to the actions being tested
-				log_file =>[],
+				log_file =>[Log::Shiras::Report::Test2Note->new],
 			},							"Build initial reports for testing";
 ok( lives{
 			$ella_peterson = Log::Shiras::Switchboard->get_operator(

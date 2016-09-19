@@ -9,3 +9,5 @@
 ^MYMETA
 ^Log-Shiras.*
 ^.travis.yml
+.*PostgreSQL.*
+.*postgresql.*

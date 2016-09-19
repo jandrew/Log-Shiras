@@ -55,6 +55,7 @@ my %WriteMakefileArgs = (
     "constant" => 0,
     "if" => 0,
     "lib" => 0,
+    "namespace::autoclean" => 0,
     "strict" => 0,
     "utf8" => 0,
     "version" => "0.77",
@@ -69,7 +70,7 @@ my %WriteMakefileArgs = (
     "Test::File" => 0,
     "Test::Moose" => 0
   },
-  "VERSION" => "v0.42.4",
+  "VERSION" => "v0.44.0",
   "test" => {
     "TESTS" => "t/Log/Shiras/*.t t/Log/Shiras/Report/*.t"
   }
@@ -116,6 +117,7 @@ my %FallbackPrereqs = (
   "constant" => 0,
   "if" => 0,
   "lib" => 0,
+  "namespace::autoclean" => 0,
   "strict" => 0,
   "utf8" => 0,
   "version" => "0.77",
