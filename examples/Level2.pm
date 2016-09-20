@@ -1,4 +1,6 @@
 package Level2;
+use strict;
+use warnings;
 use lib
 		'../lib',
 		'lib',

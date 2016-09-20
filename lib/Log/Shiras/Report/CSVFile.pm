@@ -1,12 +1,16 @@
 package Log::Shiras::Report::CSVFile;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
+use 5.010;
+use utf8;
+use Moose;
+use namespace::autoclean;
+use MooseX::StrictConstructor;
+use MooseX::HasDefaults::RO;
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTCSV );
 ###InternalReporTCSV	warn "You uncovered internal logging statements for Log::Shiras::Report::CSVFile-$VERSION" if !$ENV{hide_warn};
-use 5.010;
-use utf8;
-use MooseX::StrictConstructor;
-use MooseX::HasDefaults::RO;
 use Text::CSV_XS 1.25;
 use File::Copy qw( copy );
 use File::Temp;
@@ -598,7 +602,6 @@ sub DEMOLISH{
 
 #########1 Phinish    	      3#########4#########5#########6#########7#########8#########9
 
-no Moose;
 __PACKAGE__->meta->make_immutable;
 
 1;

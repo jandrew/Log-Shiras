@@ -70,7 +70,7 @@ my %WriteMakefileArgs = (
     "Test::File" => 0,
     "Test::Moose" => 0
   },
-  "VERSION" => "v0.44.0",
+  "VERSION" => "v0.46.0",
   "test" => {
     "TESTS" => "t/Log/Shiras/*.t t/Log/Shiras/Report/*.t"
   }

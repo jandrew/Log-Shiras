@@ -1,12 +1,14 @@
 package Log::Shiras::Report::MetaMessage;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
+use 5.010;
+use utf8;
 #~ use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTMetaMessagE );
 ###InternalReporTMetaMessagE	warn "You uncovered internal logging statements for Log::Shiras::Report::MetaMessage-$VERSION" if !$ENV{hide_warn};
 ###InternalReporTMetaMessagE	use Log::Shiras::Switchboard;
 ###InternalReporTMetaMessagE	my	$switchboard = Log::Shiras::Switchboard->instance;
-use 5.010;
-use utf8;
 use Moose::Role;
 use MooseX::Types::Moose qw( ArrayRef HashRef CodeRef );
 use Carp 'confess';

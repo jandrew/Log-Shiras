@@ -1,10 +1,12 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
+use 5.010;
+use utf8;
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
 ###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
-use 5.010;
-use utf8;
 use Moose::Role;
 use MooseX::Types::Moose qw( Str );
 

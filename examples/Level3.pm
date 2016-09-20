@@ -1,4 +1,6 @@
 package Level3;
+use strict;
+use warnings;
 
 sub check_return{
 	###SpecialCase return 'Level3 SpecialCase uncovered';
