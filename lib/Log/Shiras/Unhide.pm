@@ -1,8 +1,8 @@
 package Log::Shiras::Unhide;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
 use utf8;
 use 5.010;
-use strict;
 use warnings;
 # [rt.cpan.org #84818]
 use if $^O eq "MSWin32", "Win32";

@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.44.0");
+use version 0.77; our $VERSION = version->declare("v0.46.0");
 use utf8;
 use strict;
 use warnings;
@@ -152,7 +152,7 @@ a print buffer that always goes to the output but the send is just delayed.
 =head2 A wrapper class for messages
 
 L<Log::Shiras::Telephone> is it's own class and can be used to customize how messages
-are sent as well as being more flexible in allowing the format of sent messages.
+are sent as well as allowing more flexibility in the format of sent messages.
 
 =head2 L<Log::Shiras::Test2>
 
@@ -169,7 +169,8 @@ output existence.  I<Testing report implementation should be done traditionally.
 The 'Report' class in this package for CSV files L<Log::Shiras::Report::CSVFile>
 only adds the header to a file when it is new.  If the file connection
 is dropped and then reconnected the header will not be added again if the
-file is not empty.  It will also manage (or at least warn) on header drift.
+file is not empty.  It will also manage (or at least warn) on header drift for the
+first added row.
 
 =head2 Custom formatting
 
@@ -189,13 +190,15 @@ may tip you one way or the other.
 
 Allowing more than one destination using the same logging software in a script space
 is helpful.  This means you can write your output to multiple sources without wiring
-up the connection until later.  See also L<Log::Dispatch>.
+up the connection or finishing the destination definition until later.  See also
+L<Log::Dispatch>.
 
 =head2  Source filtering
 
-Excessive outputs for troubleshooting will overburden code.  Having a source filter
-will allow the code to remain in source control (no retyping of print statements)
-while still not burdening run time operations generally.  See also
+Excessive outputs for troubleshooting or outputs that are only used in rare
+circumstances will overburden code.  Having a source filter will allow the code to
+remain in source control (no retyping and deleting print statements) while still not
+burdening run time operations generally (unless you need the outputs).  See also
 L<Smart::Comments> and L<Log::Log4perl::Resurrector>
 
 =head2  Custom urgency levels

@@ -1,19 +1,18 @@
 package Log::Shiras::Test2;
-use version 0.77; our $VERSION = version->declare("v0.44.0");
-#~ use lib '../../';
-#~ use Log::Shiras::Unhide qw( :InternalLoGShiraSTesT );
-###InternalLoGShiraSTesT	warn "You uncovered internal logging statements for Log::Shiras::Test2-$VERSION";
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
 use 5.010;
 use utf8;
+use lib '../../';
+#~ use Log::Shiras::Unhide qw( :InternalLoGShiraSTesT );
+###InternalLoGShiraSTesT	warn "You uncovered internal logging statements for Log::Shiras::Test2-$VERSION";
 use	Moose;
 use MooseX::StrictConstructor;
 use	MooseX::HasDefaults::RO;
 use Test2::API qw/context/;
 use MooseX::Types::Moose qw( RegexpRef Bool ArrayRef );
 use Data::Dumper;
-use lib 	
-		'../../../lib',
-		'../lib';
 use Log::Shiras::Switchboard 0.029;
 use Log::Shiras::Types qw( PosInt );
 

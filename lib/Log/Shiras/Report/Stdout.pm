@@ -1,5 +1,7 @@
 package Log::Shiras::Report::Stdout;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
 use 5.010;
 use utf8;
 use Moose;
@@ -30,7 +32,6 @@ sub add_line{
 				
 	use warnings 'uninitialized';
 }
-
 
 #########1 Phinish    	      3#########4#########5#########6#########7#########8#########9
 

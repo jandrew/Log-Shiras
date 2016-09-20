@@ -1,10 +1,12 @@
 package Log::Shiras::TapPrint;
-use version; our $VERSION = version->declare("v0.44.0");
-#~ use lib '../../';
-#~ use Log::Shiras::Unhide qw( :InternalTaPPrinT );
-###InternalTaPPrinT	warn "You uncovered internal logging statements for Log::Shiras::TapPrint-$VERSION" if !$ENV{hide_warn};
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
 use 5.010;
 use utf8;
+use lib '../../';
+#~ use Log::Shiras::Unhide qw( :InternalTaPPrinT );
+###InternalTaPPrinT	warn "You uncovered internal logging statements for Log::Shiras::TapPrint-$VERSION" if !$ENV{hide_warn};
 use Moose::Exporter;
 Moose::Exporter->setup_import_methods(
     as_is => [ qw( re_route_print restore_print ) ],
@@ -12,9 +14,6 @@ Moose::Exporter->setup_import_methods(
 use MooseX::Types::Moose qw( HashRef );
 use Carp 'longmess';
 use IO::Callback;
-use strict;
-use warnings;
-use lib '../../../lib',;
 use Log::Shiras::Switchboard;
 my	$switchboard = Log::Shiras::Switchboard->instance;
 

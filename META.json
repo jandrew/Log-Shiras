@@ -88,63 +88,63 @@
    "provides" : {
       "Log::Shiras" : {
          "file" : "lib/Log/Shiras.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::LogSpace" : {
          "file" : "lib/Log/Shiras/LogSpace.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report" : {
          "file" : "lib/Log/Shiras/Report.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report::CSVFile" : {
          "file" : "lib/Log/Shiras/Report/CSVFile.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report::MetaMessage" : {
          "file" : "lib/Log/Shiras/Report/MetaMessage.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report::Stdout" : {
          "file" : "lib/Log/Shiras/Report/Stdout.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report::Test2Diag" : {
          "file" : "lib/Log/Shiras/Report/Test2Diag.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Report::Test2Note" : {
          "file" : "lib/Log/Shiras/Report/Test2Note.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Switchboard" : {
          "file" : "lib/Log/Shiras/Switchboard.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::TapPrint" : {
          "file" : "lib/Log/Shiras/TapPrint.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::TapWarn" : {
          "file" : "lib/Log/Shiras/TapWarn.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Telephone" : {
          "file" : "lib/Log/Shiras/Telephone.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Test2" : {
          "file" : "lib/Log/Shiras/Test2.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Types" : {
          "file" : "lib/Log/Shiras/Types.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       },
       "Log::Shiras::Unhide" : {
          "file" : "lib/Log/Shiras/Unhide.pm",
-         "version" : "v0.44.0"
+         "version" : "v0.46.0"
       }
    },
    "release_status" : "stable",
@@ -159,7 +159,7 @@
          "web" : "https://github.com/jandrew/Log-Shiras"
       }
    },
-   "version" : "v0.44.0",
+   "version" : "v0.46.0",
    "x_authority" : "cpan:JANDREW"
 }
 

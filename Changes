@@ -11,12 +11,17 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 {{$NEXT}}
 
-	* Another cool change (Did the PostgreSQL report make it?)
+	* Another cool change
+
+v0.46.0   2016-09-20 09:43:36-07:00 America/Los_Angeles
+
+	! Improvements to some POD
+	! I broke the use_strict kwalitee test so I over fixed it( I think Moose should count but Kwalitee doesn't agree )
 
 v0.44.0   2016-09-19 11:30:03-07:00 America/Los_Angeles
 
 	+ Changed the fatal behaviour (back) to fail after logging instead of before
-		This means the failure doesn't happen until it leaves the buffer either.
+		This means the failure doesn't happen until it leaves the buffer if the message was buffered.
 	+ Upgraded these three simple classes to Moose clases so log instantiation behaviour would be consistent
 		Log::Shiras::Report::Stdout, Log::Shiras::Report::Test2Note, Log::Shiras::Report::Test2Diag
 	! Fixed the missing clone method in the ~::Telephone for the 'ask' key

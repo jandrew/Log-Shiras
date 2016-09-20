@@ -1,5 +1,7 @@
 package Log::Shiras::Types;
-use version; our $VERSION = version->declare("v0.44.0");
+use version; our $VERSION = version->declare("v0.46.0");
+use strict;
+use warnings;
 #~ use lib '../../';
 #~ use Log::Shiras::Unhide qw( :InternalTypeSShirasFormat :InternalTypeSFileHash :InternalTypeSReportObject :InternalTypeSHeadeR);
 ###InternalTypeSShirasFormat	use Data::Dumper;
@@ -27,9 +29,6 @@ use MooseX::Types -declare =>[qw(
 	)];#
 #~ use YAML::Any qw( Dump LoadFile );
 use JSON::XS;
-use strict;
-use warnings;
-use lib '../../../lib', '../../lib';
 
 #########1 Package Variables  3#########4#########5#########6#########7#########8#########9
 
