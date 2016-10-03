@@ -1,5 +1,5 @@
 package Log::Shiras::Report;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 use 5.010;
@@ -50,7 +50,7 @@ around add_line => sub{
 		# Check for a manage_message add on
 		if( $self->can( 'manage_message' ) ){
 			$message_ref = $self->manage_message( $message_ref );
-			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 3,
+			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 1,
 			###InternalReporT		name_space => 'Log::Shiras::Report::CSVFile::add_line',
 			###InternalReporT		message =>[ 'Updated the message to:', $message_ref->{message} ], } );
 		}
@@ -62,6 +62,8 @@ around add_line => sub{
 		###InternalReporT		message =>[ 'add_line wrap finished', $times, $message_ref ], } );
 		return $times;
 	};
+	
+sub _my_test_for_around_add_line{ 1 };
 	
 
 #########1 Phinish            3#########4#########5#########6#########7#########8#########9

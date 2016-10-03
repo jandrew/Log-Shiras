@@ -1,5 +1,5 @@
 package Log::Shiras::Report::CSVFile;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 use 5.010;
@@ -8,9 +8,11 @@ use Moose;
 use namespace::autoclean;
 use MooseX::StrictConstructor;
 use MooseX::HasDefaults::RO;
-#~ use lib '../../../';
+use lib '../../../';
 #~ use Log::Shiras::Unhide qw( :InternalReporTCSV );
 ###InternalReporTCSV	warn "You uncovered internal logging statements for Log::Shiras::Report::CSVFile-$VERSION" if !$ENV{hide_warn};
+###InternalReporTCSV	use Log::Shiras::Switchboard;
+###InternalReporTCSV	my	$switchboard = Log::Shiras::Switchboard->instance;
 use Text::CSV_XS 1.25;
 use File::Copy qw( copy );
 use File::Temp;
@@ -20,10 +22,8 @@ use Fcntl qw( :flock LOCK_EX LOCK_UN SEEK_END);#
 use MooseX::Types::Moose qw(
 		FileHandle		ArrayRef		HashRef			Str			Bool
     );
-use lib '../../../../lib';
-###InternalReporTCSV	use Log::Shiras::Switchboard;
-###InternalReporTCSV	my	$switchboard = Log::Shiras::Switchboard->instance;
 use Log::Shiras::Types qw( HeaderArray HeaderString CSVFile IOFileType );
+with 'Log::Shiras::LogSpace';
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
@@ -70,38 +70,40 @@ sub add_line{
 
     my ( $self, $input_ref ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line' ),
 	###InternalReporTCSV		message =>[ 'Adding a line to the csv file -' . $self->get_file_name . '- :', $input_ref ], } );
 	my $message_ref;
 	my( $first_ref, @other_args ) = @{$input_ref->{message}};
 	if( !$first_ref ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_find_the_actual_message',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'No data in the first position - adding an empty row' ], } );
 		$message_ref = $self->_build_message_from_arrayref( [] );
 	}elsif( @other_args ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_find_the_actual_message',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'Multiple values passed - treating the inputs like a list' ], } );
 		$message_ref = $self->_build_message_from_arrayref( [ $first_ref, @other_args ] );
 	}elsif( is_HashRef( $first_ref ) ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_find_the_actual_message',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'Using the ref as it stands:', $first_ref ], } );
 		$message_ref = $self->_build_message_from_hashref( $first_ref );
 	}else{
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_find_the_actual_message',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'Treating the input as a one element string' ], } );
 		$message_ref = $self->_build_message_from_arrayref( [ $first_ref ] );
 	}
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line' ),
 	###InternalReporTCSV		message =>[ "committing the message:", $message_ref ], } );
 	$self->_send_array_ref( $self->_get_file_handle, $message_ref );
 	
 	return 1;
 }
+
+sub get_class_space{ 'CSVFile' }
 
 #########1 Private Attributes 3#########4#########5#########6#########7#########8#########9
 
@@ -160,13 +162,13 @@ has _csv_parser =>(
 sub BUILD{
 	my( $self, ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::BUILD',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'BUILD' ),
 	###InternalReporTCSV		message =>[ "Organizing the new file instance"], } );
 		
 	# Open and collect the header if available
 	$self->_open_file( $self->get_file_name );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::BUILD',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'BUILD' ),
 	###InternalReporTCSV		message =>[ "Open file complete"], } );
 	
 	# Check requested headers against an empty file
@@ -175,7 +177,7 @@ sub BUILD{
 		$self->_set_expected_header_lookup( $header_ref	);
 		if( $self->should_reconcile_headers and !$self->_has_file_headers ){ 
 			###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-			###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::BUILD',
+			###InternalReporTCSV		name_space => $self->get_all_space( 'BUILD' ),
 			###InternalReporTCSV		message =>[ "Ensuring the requested headers are in the file:", $header_ref ], } );
 			$self->_add_headers_to_file( $header_ref );
 		}
@@ -190,7 +192,7 @@ sub _open_file{
 
     my ( $self, $file ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 	###InternalReporTCSV		message =>[ "Arrived at _open_file for:", $file ], } );
 	$self->_clear_file_handle;
 	$self->_clear_file_headers;
@@ -205,26 +207,26 @@ sub _open_file{
 	flock( $fh, LOCK_EX );
 	$self->_set_file_handle( $fh );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 	###InternalReporTCSV		message =>[ 'Read file handle built: ' . -s $fh ], } );
 	
 	# Collect the header if available
 	if( -s $self->_get_file_handle ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 		###InternalReporTCSV		message =>[ "The file appears to have pre-existing content (headers)" ], } );
 		my $header_ref;
 		@$header_ref = $self->_set_parsing_header( $fh );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 		###InternalReporTCSV		message =>[ "File headers are: " . join( '~|~', @$header_ref ) ], } );
 		$self->_set_file_headers( $header_ref );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 		###InternalReporTCSV		message =>[ "File headers set" ], } );
 	}else{
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_open_file',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_open_file' ),
 		###InternalReporTCSV		message =>[ "The file is zero size" ], } );
 	}
 	
@@ -237,35 +239,35 @@ sub _open_file{
 around '_set_file_headers' => sub{
 		my( $_set_file_headers, $self, $header_ref ) = @_;
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 		###InternalReporTCSV		message =>[ 'Attempting to set the file headers to:',  $header_ref ], } );
 		if( $self->should_reconcile_headers ){
 			my( $one_extra, $two_extra ) = $self->_test_headers( $header_ref, $self->get_headers );
 			###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-			###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+			###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 			###InternalReporTCSV		message =>[ 'Returned from the header test:', $one_extra, $two_extra ], } );
 			$self->set_reconcile_headers( 0 );
 			if( $two_extra ){
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+				###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 				###InternalReporTCSV		message =>[ 'There are more expected headers than were found in the file:', $two_extra ], } );
 				push @$header_ref, @$two_extra;
 				$self->_add_headers_to_file( $header_ref );
 			}
 			if( $one_extra ){
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+				###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 				###InternalReporTCSV		message =>[ 'There are more file headers than expected headers:', $one_extra ], } );
 				$self->set_headers( $header_ref );
 			}
 			$self->set_reconcile_headers( 1 );
 		}
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 		###InternalReporTCSV		message =>[ "Setting file headers to: ", $header_ref ], } );
 		$self->$_set_file_headers( $header_ref );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 		###InternalReporTCSV		message =>[ 'Final file headers:', $self->_get_file_headers ], } );
 	};
 
@@ -273,11 +275,11 @@ around 'set_headers' => sub{
 		my( $set_headers_method, $self, $header_ref ) = @_;
 		$self->_clear_header_lookup;
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::set_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'set_headers' ),
 		###InternalReporTCSV		message =>[ 'Received a request to set headers to:', $header_ref ], } );
 		$header_ref = $self->_scrub_header_array( $header_ref );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::set_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'set_headers' ),
 		###InternalReporTCSV		message =>[ 'Attempting to set the requested headers with:',  $header_ref ], } );
 		$self->_set_expected_header_lookup( $header_ref	);
 		my( $one_extra, $two_extra, $translation );
@@ -285,12 +287,12 @@ around 'set_headers' => sub{
 			my $file_headers = $self->_get_file_headers;
 			( $one_extra, $two_extra, $translation ) = $self->_test_headers( $file_headers, $header_ref, );
 			###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-			###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+			###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 			###InternalReporTCSV		message =>[ 'Returned from the header test:', $one_extra, $two_extra, $translation ], } );
 			$self->set_reconcile_headers( 0 );
 			if( $two_extra ){
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+				###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 				###InternalReporTCSV		message =>[ 'There are more expected headers than were found in the file:', $two_extra ], } );
 				my $new_ref;
 				push @$new_ref, @$file_headers if $file_headers;
@@ -301,11 +303,11 @@ around 'set_headers' => sub{
 			$self->set_reconcile_headers( 1 );
 		}
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_file_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_set_file_headers' ),
 		###InternalReporTCSV		message =>[ "Setting requested headers to: ", $header_ref ], } );
 		$self->$set_headers_method( $header_ref );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::set_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'set_headers' ),
 		###InternalReporTCSV		message =>[ 'Final requested headers resolved to:', $header_ref,
 		###InternalReporTCSV					'...with passing-to translation resolved as:', $translation ], } );
 		return $translation;
@@ -316,7 +318,7 @@ sub _add_headers_to_file{
     my ( $self, $new_ref ) = @_;
 	#~ my $new_line = join( $self->_separator_char, @$new_ref ) . "\n";
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Arrived at _add_headers_to_file for:", $new_ref, ], } );
 		
 	# Make a temp file to create new data
@@ -324,13 +326,13 @@ sub _add_headers_to_file{
 	my $fh = File::Temp->new( UNLINK => 0, DIR => $temp_dir );
 	my $temp_parser = Text::CSV_XS->new({ binary => 1, sep_char => $self->_separator_char, eol => $\, auto_diag => 1  });#
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Tempfile open: " . $fh->filename, ], } );
 	
 	# Add the new header
 	$temp_parser->say( $fh, $new_ref );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Added headers to the tempfile: ", $new_ref, ], } );
 	
 	# Write the rest of the lines (except the old header)
@@ -344,7 +346,7 @@ sub _add_headers_to_file{
 			next;
 		}
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 		###InternalReporTCSV		message =>[ "Printing line to tempfile:", $row], } );
 		$temp_parser->say( $fh, $row );
 	}
@@ -353,20 +355,20 @@ sub _add_headers_to_file{
 	flock( $original_fh, LOCK_UN );
 	close( $original_fh ) or confess "Couldn't close file: $!";
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Closed the original file handle" ], } );
 	
 	# Close the new tempfile
 	flock( $fh, LOCK_UN );
 	close( $fh );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Closed the new temp file" ], } );
 	
 	# Replace the original file with the tempfile
 	copy( $fh->filename, $self->get_file_name ) or confess "Couldn't copy file: $!";
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Original file replaced: " . $self->get_file_name,
 	###InternalReporTCSV					'..with file: ' . $fh->filename	], } );
 	$fh = undef;
@@ -374,7 +376,7 @@ sub _add_headers_to_file{
 	# Re-run the file to get the headers registered with Text::CSV_XS;
 	$self->_open_file( $self->get_file_name );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_add_headers_to_file',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_add_headers_to_file' ),
 	###InternalReporTCSV		message =>[ "Updated file re-test complete" ], } );
 	
 	return 1;
@@ -384,29 +386,29 @@ sub _test_headers{
 
     my ( $self, $header_ref_1, $header_ref_2 ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 	###InternalReporTCSV		message =>[ "Arrived at test headers with:", $header_ref_1, $header_ref_2 ], } );
 	my( $one_extra, $two_extra, $translation );
 	if( !$header_ref_2 ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+		###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 		###InternalReporTCSV		message =>[ "No second header list passed for testing" ], } );
 		$one_extra = $header_ref_1;
 	}else{
 		my $x = 0;
 		for my $second_header ( @$header_ref_2 ){
 			###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-			###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+			###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 			###InternalReporTCSV		message =>[ "Testing second header: $second_header" ], } );
 			my $y = 0;
 			my $found_match = 0;
 			NEWHEADERTEST: for my $first_header ( @$header_ref_1 ){
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+				###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 				###InternalReporTCSV		message =>[ "Testing first header -$first_header- for a match" ], } );
 				if( $second_header eq $first_header ){
 					###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-					###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+					###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 					###InternalReporTCSV		message =>[ "Second header list -$second_header- at position: $x",
 					###InternalReporTCSV					"matches first header list header -$first_header- at position: $y" ], } );
 					$translation->{$x} = $y;
@@ -431,7 +433,7 @@ sub _test_headers{
 		}
 	}
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_test_headers',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_test_headers' ),
 	###InternalReporTCSV		message =>[ "Finished with header list 1 extra:", $one_extra,
 	###InternalReporTCSV					"...and header list 2 extra:", $two_extra,
 	###InternalReporTCSV					"...and translation ref:", $translation				], } );
@@ -441,23 +443,23 @@ sub _test_headers{
 sub _build_message_from_arrayref{
 	my( $self, $array_ref )= @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_arrayref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_arrayref' ),
 	###InternalReporTCSV		message =>[ 'Testing the message from an array ref: ' . ($self->should_test_first_row//0), $array_ref ], } );
 	my @expected_headers = $self->has_headers ? @{$self->get_headers} : ();
 	if( $self->should_test_first_row ){
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_arrayref',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_arrayref' ),
 		###InternalReporTCSV		message =>[ 'First row - testing if the list matches the header count' ], } );
 		
 		if( $#$array_ref != $#expected_headers ){
 			if( scalar( @expected_headers ) == 0 ){
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_arrayref',
+				###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_arrayref' ),
 				###InternalReporTCSV		message =>[ 'Adding dummy file headers' ], } );
 				my $dummy_headers;
 				map{ $dummy_headers->[$_] = "header_" . $_ } ( 0 .. $#$array_ref );
 				###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-				###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_arrayref',
+				###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_arrayref' ),
 				###InternalReporTCSV		message =>[ 'New dummy headers:', $dummy_headers ], } );
 				cluck "Setting dummy headers ( " . join( ', ', @$dummy_headers ) . " )" if !$ENV{hide_warn};
 				$self->set_reconcile_headers( 1 );
@@ -471,7 +473,7 @@ sub _build_message_from_arrayref{
 		$self->_test_first_row ( 0 );
 	}
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_arrayref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_arrayref' ),
 	###InternalReporTCSV		message =>[ 'Returning message ref:', $array_ref ], } );
 	return $array_ref;
 }
@@ -479,7 +481,7 @@ sub _build_message_from_arrayref{
 sub _build_message_from_hashref{
 	my( $self, $hash_ref )= @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 	###InternalReporTCSV		message =>[ 'Building the array ref from the hash ref: ' . ($self->should_test_first_row//0), $hash_ref ], } );
 	
 	# Scrub the hash
@@ -487,14 +489,14 @@ sub _build_message_from_hashref{
 	for my $key ( keys %$hash_ref ){
 		my $fixed_key = $self->_scrub_header_string( $key );
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 		###InternalReporTCSV		message =>[ "Managing key -$fixed_key- for key: $key" ], } );
 		push @missing_list, $fixed_key if $self->should_test_first_row and !$self->_has_header_named( $fixed_key );
 		$better_hash->{$fixed_key} = $hash_ref->{$key};
 	}
 	$self->_test_first_row( 0 );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 	###InternalReporTCSV		message =>[ "Updated hash message:", $better_hash,
 	###InternalReporTCSV					"...with missing list:", @missing_list ], } );
 	
@@ -503,7 +505,7 @@ sub _build_message_from_hashref{
 		my @expected_headers = $self->has_headers ? @{$self->get_headers} : ();
 		push @expected_headers, @missing_list;
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 3,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 		###InternalReporTCSV		message =>[ "Updating the expected headers with new data", [@expected_headers] ], } );
 		cluck "Adding headers from the first hashref ( " . join( ', ', @missing_list ) . " )" if !$ENV{hide_warn};
 		$self->set_reconcile_headers( 1 );
@@ -513,7 +515,7 @@ sub _build_message_from_hashref{
 	# Build the array_ref
 	my $array_ref = [];
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 	###InternalReporTCSV		message =>[ 'Building an array ref with loookup:', $self->_get_header_lookup ], } );
 	for my $header ( keys %$better_hash ){
 		if( $self->_has_header_named( $header ) ){
@@ -524,7 +526,7 @@ sub _build_message_from_hashref{
 	}
 	
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::add_line::_build_message_from_hashref',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_build_message_from_hashref' ),
 	###InternalReporTCSV		message =>[ 'Returning message array ref:', $array_ref ], } );
 	return $array_ref;
 }
@@ -532,12 +534,12 @@ sub _build_message_from_hashref{
 sub _set_expected_header_lookup{
 	my ( $self, $hash_ref ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_expected_header_lookup',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_set_expected_header_lookup' ),
 	###InternalReporTCSV		message =>[ "Arrived at _set_expected_header_lookup with:", $hash_ref ], } );
 	my( $i, $positions, ) = ( 0, {} );
 	map{ $positions->{$_} = $i++ } @$hash_ref;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_set_expected_header_lookup',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_set_expected_header_lookup' ),
 	###InternalReporTCSV		message =>[ "Header lookup hash is:", $positions ], } );
 	$self->_set_header_lookup( $positions );
 }
@@ -545,14 +547,14 @@ sub _set_expected_header_lookup{
 sub _scrub_header_array{
 	my ( $self, @args ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_array',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_array' ),
 	###InternalReporTCSV		message =>[ "Arrived at _scrub_header_array:", @args ], } );
 	my $new_ref = [];
 	for my $header ( @{$args[0]} ){
 		push @$new_ref, $self->_scrub_header_string( $header );
 	}
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_array',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_array' ),
 	###InternalReporTCSV		message =>[ "Updated header is:", $new_ref ], } );
 	return $new_ref;
 }
@@ -560,27 +562,27 @@ sub _scrub_header_array{
 sub _scrub_header_string{
 	my ( $self, $string ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "Arrived at _scrub_header_string with: $string" ], } );
 	$string = lc( $string );
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "The updated string is: $string" ], } );
 	$string =~ s/\n/ /gsxm;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "The updated string is: $string" ], } );
 	$string =~ s/\r/ /gsxm;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "The updated string is: $string" ], } );
 	$string =~ s/\s/_/gsxm;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 0,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "The updated string is: $string" ], } );
 	chomp $string;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::_scrub_header_string',
+	###InternalReporTCSV		name_space => $self->get_all_space( '_scrub_header_string' ),
 	###InternalReporTCSV		message =>[ "The final string is: $string" ], } );
 	return $string;
 }
@@ -588,14 +590,14 @@ sub _scrub_header_string{
 sub DEMOLISH{
 	my ( $self ) = @_;
 	###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 2,
-	###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::DEMOLISH',
+	###InternalReporTCSV		name_space => $self->get_all_space( 'DEMOLISH' ),
 	###InternalReporTCSV		message =>[ "Arrived at DEMOLISH" ], } ) if $switchboard;
 	if( $self->_has_file_handle ){
 		flock( $self->_get_file_handle, LOCK_UN );
 		close( $self->_get_file_handle ) or confess "Couldn't close the file handle";
 		$self->_clear_file_handle;
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporTCSV		name_space => 'Log::Shiras::Report::CSVFile::DEMOLISH',
+		###InternalReporTCSV		name_space => $self->get_all_space( 'DEMOLISH' ),
 		###InternalReporTCSV		message =>[ "Arrived at DEMOLISH" ], } ) if $switchboard;
 	}
 }

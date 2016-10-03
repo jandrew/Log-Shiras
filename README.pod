@@ -267,6 +267,8 @@ B<1.> Build a Database connection Report role
 
 B<2.> Add TapFatal with a fatal gracefully feature
 
+B<3.> Incorporate L<Tie::Scalar> with logging? http://tinypig2.blogspot.com/2016/09/tattletale-variables.html
+
 =back
 
 =head1 AUTHOR

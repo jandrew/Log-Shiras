@@ -1,5 +1,5 @@
 package Log::Shiras::Switchboard;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 use 5.010;
@@ -30,7 +30,10 @@ use Data::Walk::Prune v0.028;
 use Data::Walk::Graft v0.028;
 use Data::Walk::Print v0.028;
 use Data::Walk::Clone v0.024;
-use Log::Shiras::Types qw( ElevenArray ElevenInt ReportObject );#
+use Log::Shiras::Types qw(
+		ElevenArray		ElevenInt		ReportObject		YamlFile
+		JsonFile		FileHash		ArgsHash
+	);#
 
 #########1 Package Variables  3#########4#########5#########6#########7#########8#########9
 
