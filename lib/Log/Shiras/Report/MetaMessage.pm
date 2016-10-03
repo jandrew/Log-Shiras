@@ -1,5 +1,5 @@
 package Log::Shiras::Report::MetaMessage;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 use 5.010;
@@ -10,6 +10,7 @@ use utf8;
 ###InternalReporTMetaMessagE	use Log::Shiras::Switchboard;
 ###InternalReporTMetaMessagE	my	$switchboard = Log::Shiras::Switchboard->instance;
 use Moose::Role;
+requires '_my_test_for_around_add_line';
 use MooseX::Types::Moose qw( ArrayRef HashRef CodeRef );
 use Carp 'confess';
 

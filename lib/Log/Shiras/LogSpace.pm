@@ -1,12 +1,10 @@
 package Log::Shiras::LogSpace;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 use 5.010;
 use utf8;
-#~ use lib '../../';
-#~ use Log::Shiras::Unhide qw( :InternalLoGSpacE );
-###InternalLoGSpacE	warn "You uncovered internal logging statements for Log::Shiras::LogSpace-$VERSION";
+use lib '../../';
 use Moose::Role;
 use MooseX::Types::Moose qw( Str );
 
@@ -19,7 +17,14 @@ has log_space =>(
 		predicate	=> 'has_log_space',
 		default	=> sub{
 			my( $self ) = @_;
-			return ref $self ? ref( $self ) : $self;# Handle class calls too
+			my $ref = ref $self ? ref( $self ) : $self;
+			if( $self->can( 'get_class_space' ) ){# avoid duplicating class space at the end
+				my $class_space = $self->get_class_space;
+				if( $ref =~ /(.*)(::$class_space)/ ){
+					$ref = $1;
+				}
+			}
+			return $ref;
 		}
 	);
 

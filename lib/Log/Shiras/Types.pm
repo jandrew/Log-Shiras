@@ -1,5 +1,5 @@
 package Log::Shiras::Types;
-use version; our $VERSION = version->declare("v0.46.0");
+use version; our $VERSION = version->declare("v0.48.0");
 use strict;
 use warnings;
 #~ use lib '../../';
@@ -149,7 +149,7 @@ coerce ShirasFormat, from Str,
 					return "Coersion to 'ShirasFormat' failed for section -$pre- in " .
 						__FILE__ . " at line " . __LINE__ . ".\n";
 				}
-				if( $post =~ /^([^{]*){([^}]*)}(.)(\(([^)]*)\))?(.*)$/ ){
+				if( $post =~ /^([^{]*)\{([^}]*)\}(.)(\(([^)]*)\))?(.*)$/ ){
 					my @list = ( $1, $2, $3, $4, $5, $6 );
 ###InternalTypeSShirasFormat	warn "list:" . Dumper( @list );
 					if( !is_NewModifier( $list[2] ) ){

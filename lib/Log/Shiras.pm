@@ -1,5 +1,5 @@
 package Log::Shiras;
-use version 0.77; our $VERSION = version->declare("v0.46.0");
+use version 0.77; our $VERSION = version->declare("v0.48.0");
 use utf8;
 use strict;
 use warnings;
@@ -272,6 +272,8 @@ B<4.> Run the following
 B<1.> Build a Database connection Report role
 
 B<2.> Add TapFatal with a fatal gracefully feature
+
+B<3.> Incorporate L<Tie::Scalar> with logging? http://tinypig2.blogspot.com/2016/09/tattletale-variables.html
 
 =back
 

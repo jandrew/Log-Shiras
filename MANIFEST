@@ -14,11 +14,13 @@ examples/log_shiras.pl
 examples/log_shiras_logspace.pl
 examples/log_shiras_report_csvfile.pl
 examples/log_shiras_report_meta_message.pl
+examples/log_shiras_report_upsert.pl
 examples/log_shiras_switchboard.pl
 examples/log_shiras_tapprint.pl
 examples/log_shiras_tapwarn.pl
 examples/log_shiras_telephone.pl
 examples/log_shiras_unhide.pl
+examples/merge_rules.json
 lib/Log/Shiras.pm
 lib/Log/Shiras/LogSpace.pm
 lib/Log/Shiras/Report.pm
@@ -27,6 +29,7 @@ lib/Log/Shiras/Report/MetaMessage.pm
 lib/Log/Shiras/Report/Stdout.pm
 lib/Log/Shiras/Report/Test2Diag.pm
 lib/Log/Shiras/Report/Test2Note.pm
+lib/Log/Shiras/Report/Upsert.pm
 lib/Log/Shiras/Switchboard.pm
 lib/Log/Shiras/TapPrint.pm
 lib/Log/Shiras/TapWarn.pm

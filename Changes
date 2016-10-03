@@ -13,6 +13,12 @@ NOTE: This software is designated as beta quality until this notice is removed.
 
 	* Another cool change
 
+v0.48.0   2016-10-03 11:59:09-07:00 America/Los_Angeles
+
+	! Escaped curly brace failure for perl v5.25.5
+	! permanantly added the Log::Shiras::LogSpace role to ~::CSVFile and ~::PostgreSQL Report classes
+	+ Added a check in the Log::Shiras::LogSpace default to exclude the substring matching get_class_space
+
 v0.46.0   2016-09-20 09:43:36-07:00 America/Los_Angeles
 
 	! Improvements to some POD
