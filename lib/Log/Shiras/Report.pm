@@ -12,7 +12,9 @@ use utf8;
 use Carp qw( confess cluck );
 use MooseX::Types::Moose qw( ArrayRef HashRef );
 use Moose::Role;
-requires 'add_line';
+requires 
+###InternalReporT	'get_all_space',
+	'add_line';
 
 #########1 Public Attributes  3#########4#########5#########6#########7#########8#########9
 
@@ -31,7 +33,7 @@ requires 'add_line';
 around add_line => sub{
 		my( $_add_line, $self, $message_ref ) = @_;
 		###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 1,
-		###InternalReporT		name_space => 'Log::Shiras::Report::add_line',
+		###InternalReporT		name_space => $self->get_all_space( 'add_line::around' ),
 		###InternalReporT		message =>[ 'Scrubbing the message ref:',  $message_ref ], } );
 		
 		# Scrub the input
@@ -41,7 +43,7 @@ around add_line => sub{
 			cluck "Passing an empty message to the report";
 			$message_ref->{message} = [];
 			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 3,
-			###InternalReporT		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+			###InternalReporT		name_space => $self->get_all_space( 'add_line::around' ),
 			###InternalReporT		message =>[ 'Message ref has no message:', $message_ref ], } );
 		}elsif( !is_ArrayRef( $message_ref->{message} ) ){
 			confess "The passed 'message' key value is not an array ref";
@@ -51,16 +53,19 @@ around add_line => sub{
 		if( $self->can( 'manage_message' ) ){
 			$message_ref = $self->manage_message( $message_ref );
 			###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 1,
-			###InternalReporT		name_space => 'Log::Shiras::Report::CSVFile::add_line',
+			###InternalReporT		name_space => $self->get_all_space( 'add_line::around' ),
 			###InternalReporT		message =>[ 'Updated the message to:', $message_ref->{message} ], } );
 		}
 		
 		# Implement the method
-		my $times = $self->$_add_line( $message_ref );
-		###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 2,
-		###InternalReporT		name_space => 'Log::Shiras::Report::add_line',
-		###InternalReporT		message =>[ 'add_line wrap finished', $times, $message_ref ], } );
-		return $times;
+		my $return = $self->$_add_line( $message_ref );
+		###InternalReporT	$switchboard->master_talk( { report => 'log_file', level => 1,
+		###InternalReporT		name_space => $self->get_all_space( 'add_line::around' ),
+		###InternalReporT		message =>[ 'add_line wrap finished', $message_ref ], } );
+		if( $return and is_ArrayRef( $return ) ){
+			return 0;
+		}
+		return 1;
 	};
 	
 sub _my_test_for_around_add_line{ 1 };

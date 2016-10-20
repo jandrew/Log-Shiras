@@ -310,16 +310,21 @@ This package definitly falls in the dark magic catagory and will only slow your 
 Don't use it if you arn't willing to pay the price.  The value is all the interesting
 information you receive from the exposed code.  While this does use Filter::Util::Call
 to handle scrubbing the top level script. The included modules are scrubbed with a L<hook
-into @INC|http://perldoc.perl.org/functions/require.html> I<search for hook on that page>
-The scrubbed modules are built and loaded via temporary files built with L<File::Temp>.
-In general this is a good think since File::Temp does a good job of garbage collection
-the garbage collection fails when the code 'dies' or 'confesses..  If your code regularly
-dies or fails while ~::Unhide is active it will leave a lot of orphaned files in the temp
-directory.
+into @INC|http://perldoc.perl.org/functions/require.html> I<search for hook in the page 
+of the link> The scrubbed modules are built and loaded via temporary files built with 
+L<File::Temp>.  In general this is a good thing since File::Temp does a good job of garbage 
+collection the garbage collection fails when the code 'dies' or 'confesses..  If your code 
+regularly dies or fails while ~::Unhide is active it will leave a lot of orphaned files in 
+the temp directory.
+
+In the main script Filter::Util call doesn't appear to allow declaring 'my' variables in a 
+filtered line and then be able to use it on a different filtered line (never depend on a 
+filtered line for unfiltered lines actions).  The solution is to declare an empty 'my' 
+variable unfilterd and then add content a the filtered line as a workaround.
 
 This module also adds a startup hit to any processing where filtering is turned on and as
 such should be used with caution, however, an attempt has been made to mitigate that by
-excluding Module names matching the following regex;
+excluding filtering for Module names matching the following regex;
 
 	qr/(
 		^Archive.Zip|		^attributes|		^AutoLoader|		^B\.pm|
@@ -369,48 +374,6 @@ See the source for each module to understand which flag is used.
 B<Accepts:> $VERSION and colon prepended strip flags
 
 B<Returns:> nothing, but it transforms files prior to use
-
-=back
-
-=head1 Tags Available in CPAN
-
-This is a list (not comprehensive) of tags embedded in packages I have released to CPAN.  Since
-they require a source filter to uncover there should be minimal impact to using these packages
-unless this class is used.
-
-=over
-
-B<:InternalSwitchboarD> - L<Log::Shiras::Switchboard>
-
-B<:InternalTelephonE> - L<Log::Shiras::Telephone>
-
-B<:InternalTypeSShirasFormat> - L<Log::Shiras::Types>
-
-B<:InternalTypeSFileHash> - L<Log::Shiras::Types>
-
-B<:InternalTypeSReportObject> - L<Log::Shiras::Types>
-
-B<:InternalLoGShiraSTesT> - L<Log::Shiras::Test2>
-
-B<:InternalTaPPrinT> - L<Log::Shiras::TapPrint>
-
-B<:InternalTaPWarN> - L<Log::Shiras::TapWarn>
-
-B<:InternalReporTCSV> - L<Log::Shiras::Report::CSVFile>
-
-B<:InternalBuilDInstancE> - L<MooseX::ShortCut::BuildInstance>
-
-B<:InternalExtracteD> - L<Data::Walk::Extracted>
-
-B<:InternalExtracteDGrafT> - L<Data::Walk::Graft>
-
-B<:InternalExtracteDClonE> - L<Data::Walk::Clone>
-
-B<:InternalExtracteDPrinT> - L<Data::Walk::Print>
-
-B<::InternalExtracteDPrunE> - L<Data::Walk::Prune>
-
-B<::InternalExtracteDDispatcH> - L<Data::Walk::Extracted::Dispatch>
 
 =back
 

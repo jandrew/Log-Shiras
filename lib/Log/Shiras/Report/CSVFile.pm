@@ -74,12 +74,12 @@ sub add_line{
 	###InternalReporTCSV		message =>[ 'Adding a line to the csv file -' . $self->get_file_name . '- :', $input_ref ], } );
 	my $message_ref;
 	my( $first_ref, @other_args ) = @{$input_ref->{message}};
-	if( !$first_ref ){
+	if( !$first_ref ){# Unused with the Report interface
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
 		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'No data in the first position - adding an empty row' ], } );
 		$message_ref = $self->_build_message_from_arrayref( [] );
-	}elsif( @other_args ){
+	}elsif( @other_args ){# Unused with the Report interface
 		###InternalReporTCSV	$switchboard->master_talk( { report => 'log_file', level => 1,
 		###InternalReporTCSV		name_space => $self->get_all_space( 'add_line::_find_the_actual_message' ),
 		###InternalReporTCSV		message =>[ 'Multiple values passed - treating the inputs like a list' ], } );
